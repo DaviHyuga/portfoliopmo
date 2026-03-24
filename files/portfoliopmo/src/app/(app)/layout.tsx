@@ -9,22 +9,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect('/login')
 
-  // Busca organização do usuário
   const { data: member } = await supabase
     .from('organization_members')
-    .select('organizations(name)')
+    .select('organization_id, organizations(name)')
     .eq('user_id', user.id)
     .single()
 
-  const orgs = member?.organizations as { name: string } | { name: string }[] | null
-  const orgName = (Array.isArray(orgs) ? orgs[0]?.name : orgs?.name) ?? 'Minha Empresa'
-
-  // Se não tem org, redireciona para onboarding
   if (!member) redirect('/onboarding')
+
+  const orgName = (member?.organizations as { name: string } | null)?.name ?? 'Minha Empresa'
+
+  const { count: projectCount } = await supabase
+    .from('projects')
+    .select('*', { count: 'exact', head: true })
+    .eq('organization_id', member.organization_id)
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar orgName={orgName} />
+      <Sidebar orgName={orgName} projectCount={projectCount ?? 0} />
       <main className="flex-1 overflow-y-auto min-w-0">
         {children}
       </main>

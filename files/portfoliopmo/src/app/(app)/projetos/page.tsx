@@ -1,113 +1,97 @@
-// src/app/projetos/page.tsx
+// src/app/(app)/projetos/page.tsx
 import { getProjects } from '@/lib/projects'
-import { FarolBadge } from '@/components/ui/FarolBadge'
-import { NaturezaBadge } from '@/components/ui/NaturezaBadge'
-import { ProgressBar } from '@/components/ui/ProgressBar'
+import { ProjectForm } from '@/components/forms/ProjectForm'
 import { deleteProject } from '@/lib/actions'
 import Link from 'next/link'
 
 export const revalidate = 0
 
+const FAROL_DOT: Record<string, string> = {
+  verde:    '#22c55e',
+  amarelo:  '#f59e0b',
+  vermelho: '#ef4444',
+  azul:     '#3b82f6',
+}
+
 export default async function ProjetosPage() {
   const projects = await getProjects()
 
   return (
-    <div className="p-8">
-      <div className="flex items-start justify-between mb-7 gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projetos</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>
-            {projects.length} projeto{projects.length !== 1 ? 's' : ''} no portfólio
-          </p>
-        </div>
-        <Link
-          href="/projetos/novo"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white"
-          style={{ background: 'var(--accent)' }}
-        >
-          + Novo Projeto
-        </Link>
+    <div className="p-8 h-full">
+      <div className="mb-7">
+        <h1 className="text-2xl font-semibold tracking-tight">Gestão de Projetos</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>
+          Cadastre e edite os projetos do portfólio
+        </p>
       </div>
 
-      {projects.length === 0 ? (
-        <div className="rounded-xl border flex flex-col items-center justify-center py-20"
+      <div className="flex gap-5 items-start">
+        {/* ─── Lista ─── */}
+        <div className="w-72 flex-shrink-0 rounded-xl border overflow-hidden"
           style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
-          <div className="text-4xl mb-4 opacity-40">📁</div>
-          <p className="font-medium mb-1">Nenhum projeto cadastrado</p>
-          <p className="text-sm mb-6" style={{ color: 'var(--text2)' }}>
-            Comece adicionando o primeiro projeto do portfólio
-          </p>
-          <Link href="/projetos/novo"
-            className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-            style={{ background: 'var(--accent)' }}>
-            + Adicionar Projeto
-          </Link>
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {projects.map(p => (
-            <div key={p.id}
-              className="rounded-xl border p-5 flex items-center gap-5 hover:border-white/20 transition-colors"
-              style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+          <div className="flex items-center justify-between px-5 py-4 border-b"
+            style={{ borderColor: 'var(--border)' }}>
+            <span className="text-sm font-medium">Projetos Cadastrados</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-mono font-medium"
+              style={{ background: 'var(--accent)', color: '#fff' }}>
+              {projects.length}
+            </span>
+          </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="font-medium truncate">{p.nome}</span>
-                  <FarolBadge farol={p.farol} />
-                  <NaturezaBadge natureza={p.natureza} />
-                </div>
-                {p.descricao && (
-                  <p className="text-sm truncate mb-2" style={{ color: 'var(--text2)' }}>
-                    {p.descricao}
-                  </p>
-                )}
-                <div className="flex items-center gap-6">
-                  <ProgressBar value={p.pct_evolucao} farol={p.farol} />
-                  {p.responsavel && (
-                    <span className="text-xs" style={{ color: 'var(--text3)' }}>
-                      👤 {p.responsavel}
-                    </span>
-                  )}
-                  {p.data_fim_prevista && (
-                    <span className="text-xs" style={{ color: 'var(--text3)' }}>
-                      📅 {new Date(p.data_fim_prevista).toLocaleDateString('pt-BR')}
-                    </span>
-                  )}
-                  {p.desvios.length > 0 && (
-                    <div className="flex gap-1">
-                      {p.desvios.map(d => (
-                        <span key={d} className="text-xs px-1.5 py-0.5 rounded border capitalize"
-                          style={{ background: 'var(--bg3)', color: 'var(--text2)', borderColor: 'var(--border)' }}>
-                          {d}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Link href={`/projetos/${p.id}/editar`}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-white/5"
-                  style={{ borderColor: 'var(--border2)', color: 'var(--text2)' }}>
-                  ✏ Editar
-                </Link>
-                <form action={async () => {
-                  'use server'
-                  await deleteProject(p.id)
-                }}>
-                  <button type="submit"
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:bg-red-500/10"
-                    style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444' }}
-                    onClick={e => { if (!confirm('Excluir este projeto?')) e.preventDefault() }}>
-                    🗑
-                  </button>
-                </form>
-              </div>
+          {projects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-5 text-center">
+              <div className="text-3xl mb-3 opacity-30">📁</div>
+              <p className="text-sm" style={{ color: 'var(--text3)' }}>
+                Nenhum projeto ainda
+              </p>
             </div>
-          ))}
+          ) : (
+            <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+              {projects.map(p => (
+                <div key={p.id}
+                  className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.025] transition-colors group">
+                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ background: FAROL_DOT[p.farol] }} />
+                  <span className="flex-1 text-sm truncate">{p.nome}</span>
+                  <span className="text-sm font-mono flex-shrink-0" style={{ color: 'var(--text3)' }}>
+                    {p.pct_evolucao}%
+                  </span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Link href={`/projetos/${p.id}/editar`}
+                      className="text-xs px-2 py-0.5 rounded"
+                      style={{ color: 'var(--accent2)', background: 'var(--bg4)' }}>
+                      ✏
+                    </Link>
+                    <form action={async () => {
+                      'use server'
+                      await deleteProject(p.id)
+                    }}>
+                      <button type="submit"
+                        className="text-xs px-2 py-0.5 rounded"
+                        style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}>
+                        🗑
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* ─── Formulário ─── */}
+        <div className="flex-1 rounded-xl border overflow-hidden"
+          style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+          <div className="px-7 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--text3)' }}>
+              Novo Projeto
+            </p>
+          </div>
+          <div className="p-7">
+            <ProjectForm inline />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

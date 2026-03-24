@@ -12,8 +12,17 @@ const NAV = [
   { href: '/configuracoes', icon: '⚙', label: 'Configurações' },
 ]
 
-export function Sidebar({ orgName }: { orgName: string }) {
+interface SidebarProps {
+  orgName: string
+  projectCount: number
+}
+
+export function Sidebar({ projectCount }: SidebarProps) {
   const pathname = usePathname()
+
+  const date = new Date().toLocaleDateString('pt-BR', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
 
   return (
     <aside
@@ -22,15 +31,20 @@ export function Sidebar({ orgName }: { orgName: string }) {
     >
       {/* Logo */}
       <div className="px-5 py-6 border-b" style={{ borderColor: 'var(--border)' }}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}>
-            📊
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <rect x="2" y="2" width="8" height="8" rx="1.5" fill="#818cf8"/>
+              <rect x="12" y="2" width="8" height="8" rx="1.5" fill="#22c55e"/>
+              <rect x="2" y="12" width="8" height="8" rx="1.5" fill="#f59e0b"/>
+              <rect x="12" y="12" width="8" height="8" rx="1.5" fill="#e879f9"/>
+            </svg>
           </div>
           <div>
-            <p className="text-sm font-semibold leading-tight">PortfolioPMO</p>
-            <p className="text-xs mt-0.5 truncate max-w-28" style={{ color: 'var(--text3)' }}>
-              {orgName}
+            <p className="text-sm font-bold leading-tight tracking-tight">PortfolioPMO</p>
+            <p className="text-xs font-medium uppercase tracking-widest mt-0.5" style={{ color: 'var(--text3)' }}>
+              Painel Executivo
             </p>
           </div>
         </div>
@@ -65,17 +79,23 @@ export function Sidebar({ orgName }: { orgName: string }) {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-4 border-t" style={{ borderColor: 'var(--border)' }}>
+      <div className="px-5 py-4 border-t space-y-3" style={{ borderColor: 'var(--border)' }}>
         <form action={signOut}>
           <button
             type="submit"
-            className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm w-full transition-colors hover:bg-white/5"
+            className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm w-full transition-colors hover:bg-white/5"
             style={{ color: 'var(--text3)' }}
           >
             <span className="w-4 text-center">↩</span>
             Sair
           </button>
         </form>
+        <div className="px-2.5">
+          <p className="text-xs font-medium" style={{ color: 'var(--text2)' }}>
+            {projectCount} projeto{projectCount !== 1 ? 's' : ''}
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text3)' }}>{date}</p>
+        </div>
       </div>
     </aside>
   )

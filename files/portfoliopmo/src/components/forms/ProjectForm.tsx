@@ -8,9 +8,10 @@ import type { Project, Farol, Natureza } from '@/types'
 
 interface ProjectFormProps {
   project?: Project
+  inline?: boolean
 }
 
-export function ProjectForm({ project }: ProjectFormProps) {
+export function ProjectForm({ project, inline }: ProjectFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [pct, setPct] = useState(project?.pct_evolucao ?? 0)
@@ -55,7 +56,7 @@ export function ProjectForm({ project }: ProjectFormProps) {
     <form onSubmit={handleSubmit}>
       {project && <input type="hidden" name="id" value={project.id} />}
 
-      <div className="rounded-xl border p-7 space-y-6" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+      <div className={inline ? 'space-y-5' : 'rounded-xl border p-7 space-y-6'} style={inline ? {} : { background: 'var(--bg2)', borderColor: 'var(--border)' }}>
 
         {/* Nome */}
         <div>
@@ -197,14 +198,16 @@ export function ProjectForm({ project }: ProjectFormProps) {
           >
             {isPending ? 'Salvando...' : '💾 Salvar Projeto'}
           </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-5 py-2.5 rounded-lg text-sm font-medium border transition-colors"
-            style={{ borderColor: 'var(--border2)', color: 'var(--text2)', background: 'var(--bg3)' }}
-          >
-            Cancelar
-          </button>
+          {!inline && (
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium border transition-colors"
+              style={{ borderColor: 'var(--border2)', color: 'var(--text2)', background: 'var(--bg3)' }}
+            >
+              Cancelar
+            </button>
+          )}
         </div>
       </div>
     </form>
