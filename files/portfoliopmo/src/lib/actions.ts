@@ -70,9 +70,13 @@ export async function deleteProject(id: string) {
 
 export async function createOrganization(name: string, slug: string) {
   const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Usuário não autenticado')
+
   const { data, error } = await supabase.rpc('create_organization', {
     org_name: name,
     org_slug: slug,
+    p_user_id: user.id,
   })
 
   if (error) throw error
