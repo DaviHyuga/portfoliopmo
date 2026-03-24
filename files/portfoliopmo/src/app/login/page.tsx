@@ -17,12 +17,17 @@ export default function LoginPage() {
     setError(null)
 
     if (mode === 'login') {
-      const result = await signIn(email, password)
-      if (result.error) {
-        setError(result.error)
+      try {
+        const result = await signIn(email, password)
+        if (result.error) {
+          setError(result.error)
+          setLoading(false)
+        } else {
+          window.location.href = '/dashboard'
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Erro inesperado: ' + String(err))
         setLoading(false)
-      } else {
-        window.location.href = '/dashboard'
       }
     } else {
       try {
