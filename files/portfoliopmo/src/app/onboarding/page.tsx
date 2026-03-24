@@ -2,15 +2,12 @@
 // src/app/onboarding/page.tsx
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createOrganization } from '@/lib/actions'
 
 export default function OnboardingPage() {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-
   function toSlug(s: string) {
     return s.toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -25,7 +22,7 @@ export default function OnboardingPage() {
     setError(null)
     try {
       await createOrganization(name.trim(), toSlug(name.trim()))
-      router.push('/dashboard')
+      window.location.href = '/dashboard'
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao criar organização')
       setLoading(false)
