@@ -17,7 +17,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!member) redirect('/onboarding')
 
-  const orgName = (member?.organizations as { name: string } | null)?.name ?? 'Minha Empresa'
+  const orgs = member?.organizations as { name: string } | { name: string }[] | null
+  const orgName = (Array.isArray(orgs) ? orgs[0]?.name : orgs?.name) ?? 'Minha Empresa'
 
   const { count: projectCount } = await supabase
     .from('projects')
