@@ -2,7 +2,6 @@
 // src/app/login/page.tsx
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { signIn, signUp } from '@/lib/actions'
 
 export default function LoginPage() {
@@ -12,8 +11,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const router = useRouter()
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
