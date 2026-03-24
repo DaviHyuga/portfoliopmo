@@ -125,11 +125,11 @@ export async function removeMember(memberId: string) {
 
 // ─── Auth: Login ─────────────────────────────────────────────────────────────
 
-export async function signIn(email: string, password: string) {
+export async function signIn(email: string, password: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) throw error
-  redirect('/dashboard')
+  if (error) return { error: error.message }
+  return { error: null }
 }
 
 // ─── Auth: Registro ───────────────────────────────────────────────────────────

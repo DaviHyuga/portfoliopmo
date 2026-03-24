@@ -2,8 +2,8 @@
 // src/app/login/page.tsx
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { signIn, signUp } from '@/lib/actions'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -18,21 +18,24 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const supabase = createClient()
 
     if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError(error.message)
-      else router.push('/dashboard')
+      const result = await signIn(email, password)
+      if (result.error) {
+        setError(result.error)
+        setLoading(false)
+      } else {
+        router.push('/dashboard')
+      }
     } else {
-      const { error } = await supabase.auth.signUp({
-        email, password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
-      })
-      if (error) setError(error.message)
-      else setSuccess('Verifique seu e-mail para confirmar o cadastro.')
+      try {
+        await signUp(email, password)
+        setSuccess('Verifique seu e-mail para confirmar o cadastro.')
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Erro ao criar conta')
+      }
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const inputCls = "w-full rounded-lg border text-sm px-3 py-2.5 outline-none transition-colors focus:border-indigo-500"
