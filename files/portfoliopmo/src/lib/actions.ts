@@ -39,12 +39,12 @@ export async function upsertProject(formData: FormData) {
       .from('projects')
       .update(payload)
       .eq('id', id)
-    if (error) throw error
+    if (error) throw new Error(error.message)
   } else {
     const { error } = await supabase
       .from('projects')
       .insert(payload)
-    if (error) throw error
+    if (error) throw new Error(error.message)
   }
 
   revalidatePath('/dashboard')
@@ -61,7 +61,7 @@ export async function deleteProject(id: string) {
     .delete()
     .eq('id', id)
 
-  if (error) throw error
+  if (error) throw new Error(error.message)
   revalidatePath('/dashboard')
   revalidatePath('/projetos')
 }
@@ -79,8 +79,9 @@ export async function createOrganization(name: string, slug: string) {
     p_user_id: user.id,
   })
 
-  if (error) throw error
-  revalidatePath('/')
+  if (error) throw new Error(error.message)
+  revalidatePath('/dashboard')
+  revalidatePath('/projetos')
   return data as string
 }
 
@@ -105,7 +106,7 @@ export async function inviteMember(email: string, role: 'admin' | 'editor' | 'vi
 
   if (error) {
     if (error.code === '23505') throw new Error('Este usuário já é membro da organização.')
-    throw error
+    throw new Error(error.message)
   }
   revalidatePath('/configuracoes')
 }
@@ -119,7 +120,7 @@ export async function removeMember(memberId: string) {
     .delete()
     .eq('id', memberId)
 
-  if (error) throw error
+  if (error) throw new Error(error.message)
   revalidatePath('/configuracoes')
 }
 
@@ -141,7 +142,7 @@ export async function signUp(email: string, password: string) {
     password,
     options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` },
   })
-  if (error) throw error
+  if (error) throw new Error(error.message)
 }
 
 // ─── Auth: Logout ────────────────────────────────────────────────────────────
