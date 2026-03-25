@@ -1,29 +1,12 @@
 'use client'
 // src/app/demo/insights/page.tsx
 
+import Link from 'next/link'
 import { useDemoContext } from '../context'
 import { FarolBadge } from '@/components/ui/FarolBadge'
+import { Breadcrumb } from '../_components/Breadcrumb'
+import { gerarMitigacao } from '../_utils'
 import { NATUREZA_LABELS } from '@/types'
-import type { Project } from '@/types'
-
-function gerarMitigacao(risco: string, farol: Project['farol']): string {
-  const r = risco.toLowerCase()
-  if (/aprovação|dependência/.test(r))   return 'Mapeamento de stakeholders e processo de aprovação antecipado com buffer no cronograma'
-  if (/migração|dados|legado/.test(r))   return 'Migração incremental com ambiente de testes paralelo e validação por etapa'
-  if (/recurso|equipe|capacidade/.test(r)) return 'Identificação de gap e acionamento de alocação com antecedência mínima de 4 semanas'
-  if (/fornecedor|terceiro|externo/.test(r)) return 'Cláusulas de SLA com penalidades e identificação de fornecedor backup'
-  if (/escopo|requisito|mudança/.test(r))  return 'Processo formal de controle de mudanças (CCB) e versionamento de requisitos'
-  if (/orçamento|custo|licença/.test(r))   return 'Buffer de 15–20% nas estimativas e alerta ao atingir 70% do orçamento'
-  if (/prazo|cronograma|atraso/.test(r))   return 'Caminho crítico (CPM) e revisão semanal de dependências'
-  if (/treinamento|capacitação|adoção/.test(r)) return 'Plano de gestão da mudança com treinamentos antecipados'
-  if (/qualidade|inconsistência|erro/.test(r))  return 'Regras de validação e relatório de qualidade automatizado'
-  if (/regulatório|compliance|lgpd/.test(r))    return 'Envolvimento do DPO e revisões bimestrais com checklist'
-  if (/comunicação|alinhamento|stakeholder/.test(r)) return 'Plano de comunicação com cadência definida e canal dedicado'
-  if (/tecnologia|sistema|integração|api/.test(r))   return 'Prova de conceito técnica e documentação de interfaces'
-  if (farol === 'vermelho') return 'War room imediato com sponsor e equipe, plano de ação em 48h'
-  if (farol === 'amarelo')  return 'Monitoramento semanal e ativação de contingência em 2 semanas'
-  return 'Registro no log de riscos com responsável e revisão em reuniões de status'
-}
 
 export default function DemoInsightsPage() {
   const { projects } = useDemoContext()
@@ -47,6 +30,7 @@ export default function DemoInsightsPage() {
   return (
     <div className="p-8">
       <div className="mb-7">
+        <Breadcrumb />
         <h1 className="text-2xl font-semibold tracking-tight">Insights Executivos</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>Análise automática do portfólio</p>
       </div>
@@ -67,9 +51,10 @@ export default function DemoInsightsPage() {
         <InsightSection title="🏆 Top 3 Mais Críticos">
           {top3.length === 0 ? <EmptyCheck text="Nenhum projeto crítico ou em risco" />
             : top3.map((p, i) => (
-              <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg border"
+              <Link key={p.id} href={`/demo/projetos/${p.id}`}
+                className="flex items-center gap-3 p-3 rounded-lg border transition-colors hover:bg-white/[0.025]"
                 style={{ background: 'var(--bg3)', borderColor: 'var(--border)' }}>
-                <span className="text-xl font-bold font-mono w-6 text-center"
+                <span className="text-xl font-bold font-mono w-6 text-center flex-shrink-0"
                   style={{ color: i === 0 ? '#ef4444' : i === 1 ? '#f59e0b' : 'var(--text3)' }}>{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{p.nome}</p>
@@ -78,7 +63,8 @@ export default function DemoInsightsPage() {
                     <FarolBadge farol={p.farol} />
                   </div>
                 </div>
-              </div>
+                <span className="text-xs flex-shrink-0" style={{ color: 'var(--text3)' }}>→</span>
+              </Link>
             ))}
         </InsightSection>
 
@@ -190,9 +176,10 @@ function InsightSection({ title, count, children }: { title: string; count?: num
   )
 }
 
-function ProjectItem({ project }: { project: Project }) {
+function ProjectItem({ project }: { project: import('@/types').Project }) {
   return (
-    <div className="flex items-start gap-3 p-3 rounded-lg border"
+    <Link href={`/demo/projetos/${project.id}`}
+      className="flex items-center gap-3 p-3 rounded-lg border transition-colors hover:bg-white/[0.025]"
       style={{ background: 'var(--bg3)', borderColor: 'var(--border)' }}>
       <FarolBadge farol={project.farol} />
       <div className="flex-1 min-w-0">
@@ -202,7 +189,8 @@ function ProjectItem({ project }: { project: Project }) {
           {project.desvios.length > 0 && ` · Desvios: ${project.desvios.join(', ')}`}
         </p>
       </div>
-    </div>
+      <span className="text-xs flex-shrink-0" style={{ color: 'var(--text3)' }}>→</span>
+    </Link>
   )
 }
 

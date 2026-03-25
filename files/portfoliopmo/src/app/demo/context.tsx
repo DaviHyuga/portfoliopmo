@@ -120,6 +120,7 @@ interface DemoContextType {
   addUser: (user: Omit<DemoUser, 'id'>) => void
   removeUser: (id: string) => void
   updateUserRole: (id: string, role: DemoUser['role']) => void
+  resetDemo: () => void
 }
 
 const DemoContext = createContext<DemoContextType | null>(null)
@@ -165,8 +166,15 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u))
   }, [])
 
+  const resetDemo = useCallback(() => {
+    localStorage.removeItem('demo_projects')
+    localStorage.removeItem('demo_users')
+    setProjects(INITIAL_PROJECTS)
+    setUsers(INITIAL_USERS)
+  }, [])
+
   return (
-    <DemoContext.Provider value={{ projects, users, addProject, updateProject, deleteProject, addUser, removeUser, updateUserRole }}>
+    <DemoContext.Provider value={{ projects, users, addProject, updateProject, deleteProject, addUser, removeUser, updateUserRole, resetDemo }}>
       {children}
     </DemoContext.Provider>
   )

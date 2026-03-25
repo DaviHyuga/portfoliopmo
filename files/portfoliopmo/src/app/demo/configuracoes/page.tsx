@@ -4,6 +4,9 @@
 import { useState } from 'react'
 import { useDemoContext } from '../context'
 import type { DemoUser } from '../context'
+import { ConfirmModal } from '../_components/ConfirmModal'
+import { useToast } from '../_components/Toast'
+import { Breadcrumb } from '../_components/Breadcrumb'
 
 const ROLE_LABELS: Record<DemoUser['role'], string> = {
   admin:  'Administrador',
@@ -18,12 +21,19 @@ const ROLE_COLORS: Record<DemoUser['role'], { bg: string; color: string }> = {
 }
 
 export default function DemoConfiguracoesPage() {
-  const { users, addUser, removeUser, updateUserRole } = useDemoContext()
+  const { users, addUser, removeUser, updateUserRole, resetDemo } = useDemoContext()
+  const { showToast } = useToast()
+
   const [showForm, setShowForm] = useState(false)
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState<DemoUser['role']>('viewer')
   const [error, setError] = useState('')
+
+  // Confirm states
+  const [pendingRoleChange, setPendingRoleChange] = useState<{ id: string; name: string; role: DemoUser['role'] } | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<{ id: string; name: string } | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -33,11 +43,38 @@ export default function DemoConfiguracoesPage() {
     setNewName(''); setNewEmail(''); setNewRole('viewer'); setError(''); setShowForm(false)
   }
 
-  function handleRemove(id: string, name: string) {
+  function handleRemoveRequest(id: string, name: string) {
     const isAdmin = users.find(u => u.id === id)?.role === 'admin'
     const adminCount = users.filter(u => u.role === 'admin').length
-    if (isAdmin && adminCount <= 1) { alert('Não é possível remover o último administrador.'); return }
-    if (confirm(`Remover "${name}" da organização?`)) removeUser(id)
+    if (isAdmin && adminCount <= 1) {
+      showToast('Não é possível remover o último administrador.', 'error')
+      return
+    }
+    setPendingRemove({ id, name })
+  }
+
+  function confirmRemove() {
+    if (!pendingRemove) return
+    removeUser(pendingRemove.id)
+    showToast('Usuário removido', 'info')
+    setPendingRemove(null)
+  }
+
+  function handleRoleChangeRequest(id: string, name: string, role: DemoUser['role']) {
+    setPendingRoleChange({ id, name, role })
+  }
+
+  function confirmRoleChange() {
+    if (!pendingRoleChange) return
+    updateUserRole(pendingRoleChange.id, pendingRoleChange.role)
+    showToast(`Perfil de ${pendingRoleChange.name} atualizado`, 'success')
+    setPendingRoleChange(null)
+  }
+
+  function handleResetDemo() {
+    resetDemo()
+    showToast('Dados restaurados para o estado inicial', 'info')
+    setConfirmReset(false)
   }
 
   const inputCls = "w-full rounded-lg border text-sm px-3 py-2.5 outline-none focus:border-indigo-500"
@@ -46,6 +83,7 @@ export default function DemoConfiguracoesPage() {
   return (
     <div className="p-8 max-w-3xl">
       <div className="mb-7">
+        <Breadcrumb />
         <h1 className="text-2xl font-semibold tracking-tight">Configurações</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>Gerencie usuários e acessos da organização</p>
       </div>
@@ -78,7 +116,7 @@ export default function DemoConfiguracoesPage() {
                 {/* Role selector */}
                 <select
                   value={user.role}
-                  onChange={e => updateUserRole(user.id, e.target.value as DemoUser['role'])}
+                  onChange={e => handleRoleChangeRequest(user.id, user.name, e.target.value as DemoUser['role'])}
                   className="text-xs px-2.5 py-1.5 rounded-lg border outline-none"
                   style={{ background: rc.bg, color: rc.color, borderColor: 'transparent' }}>
                   <option value="admin">Administrador</option>
@@ -87,7 +125,7 @@ export default function DemoConfiguracoesPage() {
                 </select>
 
                 {/* Remove */}
-                <button onClick={() => handleRemove(user.id, user.name)}
+                <button onClick={() => handleRemoveRequest(user.id, user.name)}
                   className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-red-500/10"
                   style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#ef4444' }}>
                   Remover
@@ -141,7 +179,7 @@ export default function DemoConfiguracoesPage() {
       </div>
 
       {/* Legenda de permissões */}
-      <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+      <div className="rounded-xl border overflow-hidden mb-5" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
         <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <span className="text-sm font-medium">🔐 Permissões por Perfil</span>
         </div>
@@ -179,6 +217,62 @@ export default function DemoConfiguracoesPage() {
           </table>
         </div>
       </div>
+
+      {/* Zona de perigo — Restaurar dados */}
+      <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg2)', borderColor: 'rgba(239,68,68,0.4)' }}>
+        <div className="px-5 py-4 border-b" style={{ borderColor: 'rgba(239,68,68,0.3)' }}>
+          <span className="text-sm font-medium" style={{ color: '#ef4444' }}>⚠ Zona de Perigo</span>
+        </div>
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium mb-1">Restaurar dados de demonstração</p>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text3)' }}>
+                Remove todas as alterações feitas durante a demonstração e restaura os projetos e usuários para o estado inicial. Esta ação não pode ser desfeita.
+              </p>
+            </div>
+            <button
+              onClick={() => setConfirmReset(true)}
+              className="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium border transition-colors hover:bg-red-500/10"
+              style={{ borderColor: 'rgba(239,68,68,0.5)', color: '#ef4444' }}
+            >
+              Restaurar dados
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm modals */}
+      <ConfirmModal
+        isOpen={pendingRoleChange !== null}
+        title="Alterar perfil de acesso"
+        message={pendingRoleChange
+          ? `Alterar o perfil de "${pendingRoleChange.name}" para "${ROLE_LABELS[pendingRoleChange.role]}"?`
+          : ''}
+        confirmLabel="Confirmar alteração"
+        onConfirm={confirmRoleChange}
+        onCancel={() => setPendingRoleChange(null)}
+      />
+
+      <ConfirmModal
+        isOpen={pendingRemove !== null}
+        title="Remover membro"
+        message={pendingRemove ? `Remover "${pendingRemove.name}" da organização? Ele perderá todo o acesso.` : ''}
+        confirmLabel="Remover"
+        danger
+        onConfirm={confirmRemove}
+        onCancel={() => setPendingRemove(null)}
+      />
+
+      <ConfirmModal
+        isOpen={confirmReset}
+        title="Restaurar dados de demonstração"
+        message="Todos os projetos e usuários serão restaurados para o estado inicial. Qualquer alteração feita durante a demonstração será perdida. Esta ação não pode ser desfeita."
+        confirmLabel="Restaurar dados"
+        danger
+        onConfirm={handleResetDemo}
+        onCancel={() => setConfirmReset(false)}
+      />
     </div>
   )
 }

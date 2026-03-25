@@ -4,14 +4,28 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDemoContext } from '../context'
+import { useToast } from '../_components/Toast'
 import type { Project, Farol, Natureza, Desvio } from '@/types'
 
 interface Props { project?: Project }
 
+const FAROL_COLORS: Record<Farol, string> = {
+  verde:    '#22c55e',
+  amarelo:  '#f59e0b',
+  vermelho: '#ef4444',
+  azul:     '#3b82f6',
+}
+
 export function DemoProjectForm({ project }: Props) {
   const router = useRouter()
   const { addProject, updateProject } = useDemoContext()
+  const { showToast } = useToast()
+
   const [pct, setPct] = useState(project?.pct_evolucao ?? 0)
+  const [selectedFarol, setSelectedFarol] = useState<Farol | undefined>(project?.farol)
+  const [descricao, setDescricao] = useState(project?.descricao ?? '')
+  const [beneficios, setBeneficios] = useState(project?.beneficios ?? '')
+  const [riscos, setRiscos] = useState(project?.riscos ?? '')
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -24,10 +38,10 @@ export function DemoProjectForm({ project }: Props) {
 
     const data = {
       nome: f.get('nome') as string,
-      descricao: (f.get('descricao') as string) || null,
-      beneficios: (f.get('beneficios') as string) || null,
-      riscos: (f.get('riscos') as string) || null,
-      pct_evolucao: parseInt(f.get('pct_evolucao') as string) || 0,
+      descricao: descricao.trim() || null,
+      beneficios: beneficios.trim() || null,
+      riscos: riscos.trim() || null,
+      pct_evolucao: pct,
       farol: f.get('farol') as Farol,
       natureza: f.get('natureza') as Natureza,
       desvios,
@@ -41,6 +55,7 @@ export function DemoProjectForm({ project }: Props) {
     } else {
       addProject(data)
     }
+    showToast('Projeto salvo com sucesso', 'success')
     router.push('/demo/projetos')
   }
 
@@ -62,6 +77,18 @@ export function DemoProjectForm({ project }: Props) {
     { value: 'negocios',    label: 'Negócios' },
     { value: 'regional',    label: 'Regional' },
   ]
+
+  const sliderColor = selectedFarol ? FAROL_COLORS[selectedFarol] : 'var(--accent2)'
+
+  function CharCounter({ value, max }: { value: string; max: number }) {
+    const len = value.length
+    const over = len > max
+    return (
+      <p className="text-xs mt-1" style={{ color: over ? '#ef4444' : 'var(--text3)' }}>
+        {len} / {max} caracteres{over ? ' — limite excedido' : ''}
+      </p>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -85,11 +112,22 @@ export function DemoProjectForm({ project }: Props) {
             Percentual de Evolução
           </label>
           <div className="flex items-center gap-4">
-            <input type="range" name="pct_evolucao" min={0} max={100}
-              value={pct} onChange={e => setPct(+e.target.value)} className="flex-1" />
+            <div className="flex-1">
+              <input
+                type="range" name="pct_evolucao" min={0} max={100}
+                value={pct} onChange={e => setPct(+e.target.value)}
+                className="w-full"
+                style={{ accentColor: sliderColor }}
+              />
+            </div>
             <span className="text-2xl font-semibold font-mono w-16 text-right"
               style={{ color: 'var(--text)', letterSpacing: '-0.5px' }}>{pct}%</span>
           </div>
+          {pct === 100 && selectedFarol !== 'azul' && (
+            <p className="text-xs mt-1" style={{ color: '#3b82f6' }}>
+              💡 Projeto em 100% — considere definir o farol como Azul (Concluído).
+            </p>
+          )}
         </div>
 
         {/* Farol */}
@@ -101,7 +139,8 @@ export function DemoProjectForm({ project }: Props) {
             {FAROIS.map(f => (
               <label key={f.value} className={radioBase} style={radioStyle}>
                 <input type="radio" name="farol" value={f.value} required
-                  defaultChecked={project?.farol === f.value} />
+                  defaultChecked={project?.farol === f.value}
+                  onChange={() => setSelectedFarol(f.value)} />
                 {f.emoji} {f.label}
               </label>
             ))}
@@ -114,15 +153,19 @@ export function DemoProjectForm({ project }: Props) {
             <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
               Descrição de Alto Nível
             </label>
-            <textarea name="descricao" rows={3} defaultValue={project?.descricao ?? ''}
+            <textarea name="descricao" rows={3}
+              value={descricao} onChange={e => setDescricao(e.target.value)}
               placeholder="Objetivo e escopo do projeto..." className={inputCls} style={inputStyle} />
+            <CharCounter value={descricao} max={500} />
           </div>
           <div>
             <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
               Benefícios Esperados
             </label>
-            <textarea name="beneficios" rows={3} defaultValue={project?.beneficios ?? ''}
+            <textarea name="beneficios" rows={3}
+              value={beneficios} onChange={e => setBeneficios(e.target.value)}
               placeholder="Benefícios para a organização..." className={inputCls} style={inputStyle} />
+            <CharCounter value={beneficios} max={500} />
           </div>
         </div>
 
@@ -131,10 +174,12 @@ export function DemoProjectForm({ project }: Props) {
           <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
             Riscos do Projeto
           </label>
-          <textarea name="riscos" rows={4} defaultValue={project?.riscos ?? ''}
+          <textarea name="riscos" rows={4}
+            value={riscos} onChange={e => setRiscos(e.target.value)}
             placeholder={'Descreva cada risco em uma linha separada:\nDependência de aprovação de TI\nAtraso na migração de dados legados'}
             className={inputCls} style={inputStyle} />
-          <p className="text-xs mt-1" style={{ color: 'var(--text3)' }}>
+          <CharCounter value={riscos} max={1000} />
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text3)' }}>
             Um risco por linha. As estratégias de mitigação são geradas automaticamente nos Insights.
           </p>
         </div>
