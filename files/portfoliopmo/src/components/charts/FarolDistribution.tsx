@@ -2,7 +2,7 @@
 // src/components/charts/FarolDistribution.tsx
 
 import type { DashboardStats, Farol, Natureza } from '@/types'
-import { NATUREZA_LABELS, FAROL_COLORS } from '@/types'
+import { NATUREZA_LABELS, FAROL_COLORS, FAROL_LABELS } from '@/types'
 
 const NAT_COLORS: Record<Natureza, string> = {
   backoffice:  '#818cf8',
@@ -14,10 +14,10 @@ const NAT_COLORS: Record<Natureza, string> = {
 export function FarolDistribution({ stats }: { stats: DashboardStats }) {
   const total = stats.total || 1
   const farois: { key: Farol; label: string; emoji: string }[] = [
-    { key: 'verde',    label: 'Verde',    emoji: '🟢' },
-    { key: 'amarelo',  label: 'Amarelo',  emoji: '🟡' },
-    { key: 'vermelho', label: 'Vermelho', emoji: '🔴' },
-    { key: 'azul',     label: 'Azul',     emoji: '🔵' },
+    { key: 'verde',    label: FAROL_LABELS.verde,    emoji: '🟢' },
+    { key: 'amarelo',  label: FAROL_LABELS.amarelo,  emoji: '🟡' },
+    { key: 'vermelho', label: FAROL_LABELS.vermelho, emoji: '🔴' },
+    { key: 'azul',     label: FAROL_LABELS.azul,     emoji: '🔵' },
   ]
 
   return (

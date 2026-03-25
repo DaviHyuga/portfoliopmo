@@ -3,7 +3,7 @@ interface KpiCardProps {
   label: string
   value: string | number
   meta?: string
-  accent: 'accent' | 'green' | 'yellow' | 'red'
+  accent: 'accent' | 'green' | 'yellow' | 'red' | 'blue' | 'gray'
   icon?: string
 }
 
@@ -12,6 +12,8 @@ const ACCENT_COLORS: Record<string, string> = {
   green: '#22c55e',
   yellow: '#f59e0b',
   red: '#ef4444',
+  blue: '#3b82f6',
+  gray: '#888',
 }
 
 export function KpiCard({ label, value, meta, accent, icon }: KpiCardProps) {

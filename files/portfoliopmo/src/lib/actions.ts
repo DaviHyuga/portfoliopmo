@@ -32,6 +32,7 @@ export async function upsertProject(formData: FormData) {
     responsavel: (formData.get('responsavel') as string) || null,
     data_inicio: (formData.get('data_inicio') as string) || null,
     data_fim_prevista: (formData.get('data_fim_prevista') as string) || null,
+    riscos: (formData.get('riscos') as string) || null,
   }
 
   if (id) {

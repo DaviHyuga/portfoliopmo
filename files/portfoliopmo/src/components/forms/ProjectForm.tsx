@@ -124,6 +124,19 @@ export function ProjectForm({ project, inline }: ProjectFormProps) {
           </div>
         </div>
 
+        {/* Riscos */}
+        <div>
+          <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+            Riscos do Projeto
+          </label>
+          <textarea name="riscos" rows={4} defaultValue={project?.riscos ?? ''}
+            placeholder={'Descreva cada risco em uma linha separada:\nDependência de aprovação de TI\nAtraso na migração de dados legados'}
+            className={inputCls} style={inputStyle} />
+          <p className="text-xs mt-1" style={{ color: 'var(--text3)' }}>
+            Um risco por linha. As estratégias de mitigação são geradas automaticamente nos Insights.
+          </p>
+        </div>
+
         {/* Natureza + Desvios + Datas */}
         <div className="grid grid-cols-3 gap-6">
           <div>

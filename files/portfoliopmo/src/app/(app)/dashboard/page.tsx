@@ -6,6 +6,7 @@ import { NaturezaBadge } from '@/components/ui/NaturezaBadge'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { BarChartProjects } from '@/components/charts/BarChartProjects'
 import { FarolDistribution } from '@/components/charts/FarolDistribution'
+import { QuartersChart } from '@/components/charts/QuartersChart'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { FAROL_LABELS } from '@/types'
 import Link from 'next/link'
@@ -42,7 +43,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <KpiCard
           label="Evolução Média"
           value={stats.total > 0 ? `${stats.mediaEvolucao}%` : '–'}
@@ -54,23 +55,50 @@ export default async function DashboardPage() {
           label="Total de Projetos"
           value={stats.total}
           meta="no portfólio ativo"
-          accent="green"
+          accent="gray"
           icon="✦"
+        />
+        <KpiCard
+          label="Projetos no Prazo"
+          value={stats.porFarol.verde}
+          meta="farol verde"
+          accent="green"
+          icon="🟢"
         />
         <KpiCard
           label="Em Risco"
           value={stats.emRisco.length}
-          meta="sinal amarelo"
+          meta="farol amarelo"
           accent="yellow"
           icon="⚡"
         />
         <KpiCard
           label="Críticos"
           value={stats.criticos.length}
-          meta="sinal vermelho"
+          meta="farol vermelho"
           accent="red"
           icon="⚠"
         />
+        <KpiCard
+          label="Projetos Concluídos"
+          value={stats.porFarol.azul}
+          meta="farol azul"
+          accent="blue"
+          icon="🔵"
+        />
+      </div>
+
+      {/* Quarters chart */}
+      <div className="rounded-xl border overflow-hidden mb-5" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+          <span className="text-sm font-medium">Distribuição por Trimestre</span>
+          <span className="text-xs px-2 py-1 rounded-full font-mono" style={{ background: 'var(--bg4)', color: 'var(--text2)' }}>
+            {projects.filter(p => p.data_fim_prevista).length} com prazo definido
+          </span>
+        </div>
+        <div className="px-5 py-4">
+          <QuartersChart projects={projects} />
+        </div>
       </div>
 
       {/* Charts row */}
@@ -115,7 +143,7 @@ export default async function DashboardPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  {['Projeto', 'Evolução', 'Farol', 'Natureza', 'Desvio'].map(h => (
+                  {['Projeto', 'Evolução', 'Farol', 'Natureza', 'Desvio', 'Benefícios'].map(h => (
                     <th key={h} className="text-left px-5 pb-3 pt-0 text-xs font-medium uppercase tracking-wider border-b"
                       style={{ color: 'var(--text3)', borderColor: 'var(--border)' }}>
                       {h}
@@ -152,6 +180,15 @@ export default async function DashboardPage() {
                             </span>
                           ))}
                         </div>
+                      ) : (
+                        <span style={{ color: 'var(--text3)', fontSize: '12px' }}>–</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 max-w-xs">
+                      {p.beneficios ? (
+                        <span className="text-xs leading-relaxed" style={{ color: 'var(--text2)' }}>
+                          {p.beneficios.length > 80 ? p.beneficios.slice(0, 80) + '…' : p.beneficios}
+                        </span>
                       ) : (
                         <span style={{ color: 'var(--text3)', fontSize: '12px' }}>–</span>
                       )}
