@@ -85,6 +85,58 @@ export default async function InsightsPage() {
         </InsightSection>
       </div>
 
+      {/* Análise e Mitigação de Riscos */}
+      {projects.some(p => p.riscos) && (
+        <div className="rounded-xl border overflow-hidden mb-5" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+            <span className="text-sm font-medium">⚠ Análise e Mitigação de Riscos</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-mono"
+              style={{ background: 'var(--bg4)', color: 'var(--text2)' }}>
+              {projects.reduce((acc, p) => acc + (p.riscos ? p.riscos.split('\n').filter(r => r.trim()).length : 0), 0)} riscos
+            </span>
+          </div>
+          <div className="p-5 space-y-5">
+            {projects.filter(p => p.riscos).map(p => {
+              const riscos = p.riscos!.split('\n').filter(r => r.trim())
+              return (
+                <div key={p.id}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <FarolBadge farol={p.farol} />
+                    <span className="text-sm font-medium">{p.nome}</span>
+                  </div>
+                  <div className="rounded-lg border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                    <table className="w-full">
+                      <thead>
+                        <tr style={{ background: 'var(--bg3)' }}>
+                          <th className="text-left px-4 py-2.5 text-xs font-medium uppercase tracking-wider w-1/2"
+                            style={{ color: 'var(--text3)', borderBottom: '1px solid var(--border)' }}>
+                            ⚠ Risco identificado
+                          </th>
+                          <th className="text-left px-4 py-2.5 text-xs font-medium uppercase tracking-wider w-1/2"
+                            style={{ color: 'var(--text3)', borderBottom: '1px solid var(--border)' }}>
+                            🛡 Estratégia de mitigação
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {riscos.map((risco, i) => (
+                          <tr key={i} className="border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
+                            <td className="px-4 py-3 text-xs" style={{ color: 'var(--text2)' }}>{risco.trim()}</td>
+                            <td className="px-4 py-3 text-xs" style={{ color: 'var(--text2)' }}>
+                              {gerarMitigacao(risco.trim(), p.farol)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Recomendações */}
       <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
         <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
@@ -162,6 +214,39 @@ function StatRow({ icon, label, value }: { icon: string; label: string; value: s
       <span className="text-sm font-medium font-mono">{value}</span>
     </div>
   )
+}
+
+function gerarMitigacao(risco: string, farol: import('@/types').Farol): string {
+  const r = risco.toLowerCase()
+  if (/aprovação|dependência/.test(r))
+    return 'Mapeamento de stakeholders e processo de aprovação antecipado com buffer no cronograma'
+  if (/migração|dados|legado/.test(r))
+    return 'Migração incremental com ambiente de testes paralelo e validação por etapa'
+  if (/recurso|equipe|capacidade/.test(r))
+    return 'Identificação de gap e acionamento de alocação com antecedência mínima de 4 semanas'
+  if (/fornecedor|terceiro|externo/.test(r))
+    return 'Cláusulas de SLA com penalidades e identificação de fornecedor backup'
+  if (/escopo|requisito|mudança/.test(r))
+    return 'Processo formal de controle de mudanças (CCB) e versionamento de requisitos'
+  if (/orçamento|custo|licença/.test(r))
+    return 'Buffer de 15–20% nas estimativas e alerta ao atingir 70% do orçamento'
+  if (/prazo|cronograma|atraso/.test(r))
+    return 'Caminho crítico (CPM) e revisão semanal de dependências'
+  if (/treinamento|capacitação|adoção/.test(r))
+    return 'Plano de gestão da mudança com treinamentos antecipados'
+  if (/qualidade|inconsistência|erro/.test(r))
+    return 'Regras de validação e relatório de qualidade automatizado'
+  if (/regulatório|compliance|lgpd/.test(r))
+    return 'Envolvimento do DPO e revisões bimestrais com checklist'
+  if (/comunicação|alinhamento|stakeholder/.test(r))
+    return 'Plano de comunicação com cadência definida e canal dedicado'
+  if (/tecnologia|sistema|integração|api/.test(r))
+    return 'Prova de conceito técnica e documentação de interfaces'
+  if (farol === 'vermelho')
+    return 'War room imediato com sponsor e equipe, plano de ação em 48h'
+  if (farol === 'amarelo')
+    return 'Monitoramento semanal e ativação de contingência em 2 semanas'
+  return 'Registro no log de riscos com responsável e revisão em reuniões de status'
 }
 
 function buildRecommendations(stats: import('@/types').DashboardStats, concluidos: number) {

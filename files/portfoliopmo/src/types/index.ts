@@ -17,6 +17,7 @@ export interface Project {
   responsavel: string | null
   data_inicio: string | null
   data_fim_prevista: string | null
+  riscos: string | null
   created_at: string
   updated_at: string
 }

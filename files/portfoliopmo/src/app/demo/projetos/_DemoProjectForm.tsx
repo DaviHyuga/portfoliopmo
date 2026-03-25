@@ -1,76 +1,109 @@
 'use client'
-// src/components/forms/ProjectForm.tsx
+// src/app/demo/projetos/_DemoProjectForm.tsx — formulário de projeto para o modo demo
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { upsertProject } from '@/lib/actions'
-import type { Project, Farol, Natureza } from '@/types'
+import { useDemoContext } from '../context'
+import { useToast } from '../_components/Toast'
+import type { Project, Farol, Natureza, Desvio } from '@/types'
 
-interface ProjectFormProps {
-  project?: Project
-  inline?: boolean
+interface Props { project?: Project }
+
+const FAROL_COLORS: Record<Farol, string> = {
+  verde:    '#22c55e',
+  amarelo:  '#f59e0b',
+  vermelho: '#ef4444',
+  azul:     '#3b82f6',
 }
 
-export function ProjectForm({ project, inline }: ProjectFormProps) {
+export function DemoProjectForm({ project }: Props) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const { addProject, updateProject } = useDemoContext()
+  const { showToast } = useToast()
+
   const [pct, setPct] = useState(project?.pct_evolucao ?? 0)
-  const [error, setError] = useState<string | null>(null)
+  const [selectedFarol, setSelectedFarol] = useState<Farol | undefined>(project?.farol)
+  const [descricao, setDescricao] = useState(project?.descricao ?? '')
+  const [beneficios, setBeneficios] = useState(project?.beneficios ?? '')
+  const [riscos, setRiscos] = useState(project?.riscos ?? '')
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setError(null)
-    const form = e.currentTarget
-    const data = new FormData(form)
+    const f = new FormData(e.currentTarget)
 
-    startTransition(async () => {
-      try {
-        await upsertProject(data)
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Erro ao salvar projeto')
-      }
-    })
+    const desvios: Desvio[] = []
+    if (f.get('d_escopo')) desvios.push('escopo')
+    if (f.get('d_prazo')) desvios.push('prazo')
+    if (f.get('d_risco')) desvios.push('risco')
+
+    const data = {
+      nome: f.get('nome') as string,
+      descricao: descricao.trim() || null,
+      beneficios: beneficios.trim() || null,
+      riscos: riscos.trim() || null,
+      pct_evolucao: pct,
+      farol: f.get('farol') as Farol,
+      natureza: f.get('natureza') as Natureza,
+      desvios,
+      responsavel: (f.get('responsavel') as string) || null,
+      data_inicio: (f.get('data_inicio') as string) || null,
+      data_fim_prevista: (f.get('data_fim_prevista') as string) || null,
+    }
+
+    if (project) {
+      updateProject(project.id, data)
+    } else {
+      addProject(data)
+    }
+    showToast('Projeto salvo com sucesso', 'success')
+    router.push('/demo/projetos')
   }
 
   const inputCls = "w-full rounded-lg border text-sm px-3 py-2.5 outline-none transition-colors focus:border-indigo-500"
   const inputStyle = { background: 'var(--bg3)', borderColor: 'var(--border2)', color: 'var(--text)' }
-
   const radioBase = "flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-all"
   const radioStyle = { borderColor: 'var(--border)', background: 'var(--bg3)', color: 'var(--text2)' }
 
-  const FAROIS: { value: Farol; label: string; emoji: string; color: string }[] = [
-    { value: 'verde', label: 'Verde — No prazo', emoji: '🟢', color: '#22c55e' },
-    { value: 'amarelo', label: 'Amarelo — Risco de atraso', emoji: '🟡', color: '#f59e0b' },
-    { value: 'vermelho', label: 'Vermelho — Atrasado/Pausado', emoji: '🔴', color: '#ef4444' },
-    { value: 'azul', label: 'Azul — Concluído', emoji: '🔵', color: '#3b82f6' },
+  const FAROIS: { value: Farol; label: string; emoji: string }[] = [
+    { value: 'verde',    label: 'Verde — No prazo',           emoji: '🟢' },
+    { value: 'amarelo',  label: 'Amarelo — Risco de atraso',  emoji: '🟡' },
+    { value: 'vermelho', label: 'Vermelho — Atrasado/Pausado',emoji: '🔴' },
+    { value: 'azul',     label: 'Azul — Concluído',           emoji: '🔵' },
   ]
 
   const NATUREZAS: { value: Natureza; label: string }[] = [
-    { value: 'backoffice', label: 'Backoffice' },
+    { value: 'backoffice',  label: 'Backoffice' },
     { value: 'regulatorio', label: 'Regulatório' },
-    { value: 'negocios', label: 'Negócios' },
-    { value: 'regional', label: 'Regional' },
+    { value: 'negocios',    label: 'Negócios' },
+    { value: 'regional',    label: 'Regional' },
   ]
+
+  const sliderColor = selectedFarol ? FAROL_COLORS[selectedFarol] : 'var(--accent2)'
+
+  function CharCounter({ value, max }: { value: string; max: number }) {
+    const len = value.length
+    const over = len > max
+    return (
+      <p className="text-xs mt-1" style={{ color: over ? '#ef4444' : 'var(--text3)' }}>
+        {len} / {max} caracteres{over ? ' — limite excedido' : ''}
+      </p>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit}>
       {project && <input type="hidden" name="id" value={project.id} />}
 
-      <div className={inline ? 'space-y-5' : 'rounded-xl border p-7 space-y-6'} style={inline ? {} : { background: 'var(--bg2)', borderColor: 'var(--border)' }}>
+      <div className="rounded-xl border p-7 space-y-6" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
 
         {/* Nome */}
         <div>
           <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
             Nome do Projeto *
           </label>
-          <input
-            name="nome"
-            required
-            defaultValue={project?.nome}
+          <input name="nome" required defaultValue={project?.nome}
             placeholder="Ex: Digitalização do Processo de RH"
-            className={inputCls}
-            style={inputStyle}
-          />
+            className={inputCls} style={inputStyle} />
         </div>
 
         {/* Percentual */}
@@ -79,15 +112,22 @@ export function ProjectForm({ project, inline }: ProjectFormProps) {
             Percentual de Evolução
           </label>
           <div className="flex items-center gap-4">
-            <input
-              type="range" name="pct_evolucao" min={0} max={100}
-              value={pct} onChange={e => setPct(+e.target.value)}
-              className="flex-1"
-            />
-            <span className="text-2xl font-semibold font-mono w-16 text-right" style={{ color: 'var(--text)', letterSpacing: '-0.5px' }}>
-              {pct}%
-            </span>
+            <div className="flex-1">
+              <input
+                type="range" name="pct_evolucao" min={0} max={100}
+                value={pct} onChange={e => setPct(+e.target.value)}
+                className="w-full"
+                style={{ accentColor: sliderColor }}
+              />
+            </div>
+            <span className="text-2xl font-semibold font-mono w-16 text-right"
+              style={{ color: 'var(--text)', letterSpacing: '-0.5px' }}>{pct}%</span>
           </div>
+          {pct === 100 && selectedFarol !== 'azul' && (
+            <p className="text-xs mt-1" style={{ color: '#3b82f6' }}>
+              💡 Projeto em 100% — considere definir o farol como Azul (Concluído).
+            </p>
+          )}
         </div>
 
         {/* Farol */}
@@ -99,7 +139,8 @@ export function ProjectForm({ project, inline }: ProjectFormProps) {
             {FAROIS.map(f => (
               <label key={f.value} className={radioBase} style={radioStyle}>
                 <input type="radio" name="farol" value={f.value} required
-                  defaultChecked={project?.farol === f.value} />
+                  defaultChecked={project?.farol === f.value}
+                  onChange={() => setSelectedFarol(f.value)} />
                 {f.emoji} {f.label}
               </label>
             ))}
@@ -112,15 +153,19 @@ export function ProjectForm({ project, inline }: ProjectFormProps) {
             <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
               Descrição de Alto Nível
             </label>
-            <textarea name="descricao" rows={3} defaultValue={project?.descricao ?? ''}
+            <textarea name="descricao" rows={3}
+              value={descricao} onChange={e => setDescricao(e.target.value)}
               placeholder="Objetivo e escopo do projeto..." className={inputCls} style={inputStyle} />
+            <CharCounter value={descricao} max={500} />
           </div>
           <div>
             <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
               Benefícios Esperados
             </label>
-            <textarea name="beneficios" rows={3} defaultValue={project?.beneficios ?? ''}
+            <textarea name="beneficios" rows={3}
+              value={beneficios} onChange={e => setBeneficios(e.target.value)}
               placeholder="Benefícios para a organização..." className={inputCls} style={inputStyle} />
+            <CharCounter value={beneficios} max={500} />
           </div>
         </div>
 
@@ -129,10 +174,12 @@ export function ProjectForm({ project, inline }: ProjectFormProps) {
           <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
             Riscos do Projeto
           </label>
-          <textarea name="riscos" rows={4} defaultValue={project?.riscos ?? ''}
+          <textarea name="riscos" rows={4}
+            value={riscos} onChange={e => setRiscos(e.target.value)}
             placeholder={'Descreva cada risco em uma linha separada:\nDependência de aprovação de TI\nAtraso na migração de dados legados'}
             className={inputCls} style={inputStyle} />
-          <p className="text-xs mt-1" style={{ color: 'var(--text3)' }}>
+          <CharCounter value={riscos} max={1000} />
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text3)' }}>
             Um risco por linha. As estratégias de mitigação são geradas automaticamente nos Insights.
           </p>
         </div>
@@ -194,33 +241,18 @@ export function ProjectForm({ project, inline }: ProjectFormProps) {
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="text-sm px-3 py-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
-            {error}
-          </div>
-        )}
-
         {/* Actions */}
         <div className="flex items-center gap-3 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-50"
-            style={{ background: 'var(--accent)' }}
-          >
-            {isPending ? 'Salvando...' : '💾 Salvar Projeto'}
+          <button type="submit"
+            className="px-5 py-2.5 rounded-lg text-sm font-medium text-white"
+            style={{ background: 'var(--accent)' }}>
+            💾 Salvar Projeto
           </button>
-          {!inline && (
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-5 py-2.5 rounded-lg text-sm font-medium border transition-colors"
-              style={{ borderColor: 'var(--border2)', color: 'var(--text2)', background: 'var(--bg3)' }}
-            >
-              Cancelar
-            </button>
-          )}
+          <button type="button" onClick={() => router.back()}
+            className="px-5 py-2.5 rounded-lg text-sm font-medium border transition-colors"
+            style={{ borderColor: 'var(--border2)', color: 'var(--text2)', background: 'var(--bg3)' }}>
+            Cancelar
+          </button>
         </div>
       </div>
     </form>
