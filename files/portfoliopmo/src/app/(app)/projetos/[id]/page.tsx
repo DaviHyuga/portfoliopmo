@@ -6,6 +6,7 @@ import { FarolBadge } from '@/components/ui/FarolBadge'
 import { NaturezaBadge } from '@/components/ui/NaturezaBadge'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { getDeadlineBadge, gerarMitigacao } from '@/app/demo/_utils'
+import { DeleteButton } from './_DeleteButton'
 
 export const revalidate = 0
 
@@ -56,6 +57,7 @@ export default async function ProjetoDetailPage({ params }: { params: { id: stri
             style={{ borderColor: 'var(--border2)', color: 'var(--text2)' }}>
             ✎ Editar Projeto
           </Link>
+          <DeleteButton id={project.id} nome={project.nome} />
           <Link href="/projetos"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors hover:bg-white/5"
             style={{ borderColor: 'var(--border2)', color: 'var(--text3)' }}>
