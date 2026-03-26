@@ -10,6 +10,7 @@ import { ToastProvider } from './_components/Toast'
 const NAV = [
   { href: '/demo',               icon: '▦', label: 'Dashboard' },
   { href: '/demo/projetos',      icon: '✦', label: 'Projetos' },
+  { href: '/demo/entregues',     icon: '📦', label: 'Proj. Entregues' },
   { href: '/demo/insights',      icon: '◈', label: 'Insights' },
   { href: '/demo/configuracoes', icon: '⚙', label: 'Configurações' },
 ]

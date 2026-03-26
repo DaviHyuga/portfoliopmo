@@ -5,6 +5,67 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { Project } from '@/types'
 
 const INITIAL_PROJECTS: Project[] = [
+  // ── Azul 2025 Q1 ──
+  {
+    id: '11', organization_id: 'demo',
+    nome: 'Migração para Pagamentos PIX',
+    descricao: 'Integração com o ecossistema PIX do Banco Central para pagamentos instantâneos em todos os produtos',
+    beneficios: 'Eliminação de taxas de TED/DOC estimada em R$ 800K/ano e redução de 90% no tempo de liquidação',
+    riscos: null,
+    pct_evolucao: 100, farol: 'azul', natureza: 'regulatorio',
+    desvios: [], responsavel: 'Bruno Alves',
+    data_inicio: '2024-10-01', data_fim_prevista: '2025-02-28',
+    created_at: '2024-10-01T00:00:00Z', updated_at: '2024-10-01T00:00:00Z',
+  },
+  // ── Azul 2025 Q2 ──
+  {
+    id: '12', organization_id: 'demo',
+    nome: 'Customer Data Platform (CDP)',
+    descricao: 'Unificação de dados de clientes em plataforma centralizada com segmentação em tempo real',
+    beneficios: 'Aumento de 28% na conversão de campanhas e redução de 40% no custo de aquisição por cliente',
+    riscos: null,
+    pct_evolucao: 100, farol: 'azul', natureza: 'negocios',
+    desvios: [], responsavel: 'Juliana Ramos',
+    data_inicio: '2024-12-01', data_fim_prevista: '2025-05-31',
+    created_at: '2024-12-01T00:00:00Z', updated_at: '2024-12-01T00:00:00Z',
+  },
+  // ── Azul 2025 Q3 ──
+  {
+    id: '13', organization_id: 'demo',
+    nome: 'Automação de Onboarding Corporativo',
+    descricao: 'Digitalização e automação do processo de onboarding de clientes pessoa jurídica com validação de KYC',
+    beneficios: 'Redução de 15 para 2 dias no tempo de ativação e aumento de 22% na satisfação (NPS pós-onboarding)',
+    riscos: null,
+    pct_evolucao: 100, farol: 'azul', natureza: 'negocios',
+    desvios: [], responsavel: 'Thiago Souza',
+    data_inicio: '2025-02-01', data_fim_prevista: '2025-08-15',
+    created_at: '2025-02-01T00:00:00Z', updated_at: '2025-02-01T00:00:00Z',
+  },
+  // ── Azul 2026 Q2 ──
+  {
+    id: '14', organization_id: 'demo',
+    nome: 'Open Insurance — Fase 2',
+    descricao: 'Implementação da fase 2 do Open Insurance com compartilhamento de dados de seguros e APIs padronizadas',
+    beneficios: 'Conformidade regulatória com SUSEP e habilitação para novos produtos baseados em dados compartilhados',
+    riscos: null,
+    pct_evolucao: 100, farol: 'azul', natureza: 'regulatorio',
+    desvios: [], responsavel: 'Carla Mendes',
+    data_inicio: '2025-11-01', data_fim_prevista: '2026-05-31',
+    created_at: '2025-11-01T00:00:00Z', updated_at: '2025-11-01T00:00:00Z',
+  },
+  // ── Azul 2026 Q4 ──
+  {
+    id: '15', organization_id: 'demo',
+    nome: 'Plataforma de Gestão de Sinistros 2.0',
+    descricao: 'Modernização do sistema de sinistros com IA para triagem automática e análise de documentos',
+    beneficios: 'Redução de 65% no tempo de liquidação de sinistros simples e economia de R$ 3,2M/ano em operações',
+    riscos: null,
+    pct_evolucao: 100, farol: 'azul', natureza: 'backoffice',
+    desvios: [], responsavel: 'Eduardo Pires',
+    data_inicio: '2026-03-01', data_fim_prevista: '2026-11-30',
+    created_at: '2026-03-01T00:00:00Z', updated_at: '2026-03-01T00:00:00Z',
+  },
+  // ── Projetos ativos ──
   {
     id: '1', organization_id: 'demo',
     nome: 'Plataforma de Dados Corporativos',
@@ -137,6 +198,8 @@ type ProjectInput = Omit<Project, 'id' | 'organization_id' | 'created_at' | 'upd
 interface DemoContextType {
   projects: Project[]
   users: DemoUser[]
+  selectedYear: number
+  setSelectedYear: (year: number) => void
   addProject: (data: ProjectInput) => void
   updateProject: (id: string, data: ProjectInput) => void
   deleteProject: (id: string) => void
@@ -151,6 +214,7 @@ const DemoContext = createContext<DemoContextType | null>(null)
 export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS)
   const [users, setUsers] = useState<DemoUser[]>(INITIAL_USERS)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
 
   // Carrega do localStorage
   useEffect(() => {
@@ -197,7 +261,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <DemoContext.Provider value={{ projects, users, addProject, updateProject, deleteProject, addUser, removeUser, updateUserRole, resetDemo }}>
+    <DemoContext.Provider value={{ projects, users, selectedYear, setSelectedYear, addProject, updateProject, deleteProject, addUser, removeUser, updateUserRole, resetDemo }}>
       {children}
     </DemoContext.Provider>
   )

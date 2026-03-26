@@ -6,19 +6,34 @@ import { NaturezaBadge } from '@/components/ui/NaturezaBadge'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { BarChartProjects } from '@/components/charts/BarChartProjects'
 import { FarolDistribution } from '@/components/charts/FarolDistribution'
-import { QuartersChart } from '@/components/charts/QuartersChart'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { FAROL_LABELS } from '@/types'
 import Link from 'next/link'
 import { ExportButtons } from '@/components/ui/ExportButtons'
+import { Suspense } from 'react'
+import { YearFilterUrl } from '@/components/ui/YearFilterUrl'
 
 export const revalidate = 0 // sempre busca dados frescos
 
-export default async function DashboardPage() {
-  const [stats, projects] = await Promise.all([
-    getDashboardStats(),
-    getProjects(),
-  ])
+export default async function DashboardPage({ searchParams }: { searchParams: { ano?: string } }) {
+  const currentYear = new Date().getFullYear()
+  const selectedYear = Number(searchParams.ano) || currentYear
+  const allProjects = await getProjects()
+  const projects = allProjects.filter(p =>
+    p.data_fim_prevista &&
+    new Date(p.data_fim_prevista + 'T00:00:00').getFullYear() === selectedYear
+  )
+
+  const total = projects.length
+  const mediaEvolucao = total > 0 ? Math.round(projects.reduce((a, p) => a + p.pct_evolucao, 0) / total) : 0
+  const porFarol = { verde: 0, amarelo: 0, vermelho: 0, azul: 0 }
+  const porNatureza = { backoffice: 0, regulatorio: 0, negocios: 0, regional: 0 }
+  projects.forEach(p => { porFarol[p.farol]++; porNatureza[p.natureza as keyof typeof porNatureza]++ })
+  const stats = {
+    total, mediaEvolucao, porFarol, porNatureza,
+    criticos: projects.filter(p => p.farol === 'vermelho'),
+    emRisco: projects.filter(p => p.farol === 'amarelo'),
+  }
 
   const insights = buildInsights(stats)
 
@@ -35,6 +50,9 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Suspense>
+            <YearFilterUrl defaultYear={currentYear} />
+          </Suspense>
           <ExportButtons />
           <Link
             href="/projetos/novo"
@@ -90,19 +108,6 @@ export default async function DashboardPage() {
           accent="blue"
           icon="🔵"
         />
-      </div>
-
-      {/* Quarters chart */}
-      <div className="rounded-xl border overflow-hidden mb-5" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-          <span className="text-sm font-medium">Distribuição por Trimestre</span>
-          <span className="text-xs px-2 py-1 rounded-full font-mono" style={{ background: 'var(--bg4)', color: 'var(--text2)' }}>
-            {projects.filter(p => p.data_fim_prevista).length} com prazo definido
-          </span>
-        </div>
-        <div className="px-5 py-4">
-          <QuartersChart projects={projects} />
-        </div>
       </div>
 
       {/* Charts row */}

@@ -11,8 +11,8 @@ import { NaturezaBadge } from '@/components/ui/NaturezaBadge'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { BarChartProjects } from '@/components/charts/BarChartProjects'
 import { FarolDistribution } from '@/components/charts/FarolDistribution'
-import { QuartersChart } from '@/components/charts/QuartersChart'
 import { InsightCard } from '@/components/ui/InsightCard'
+import { DemoYearFilter } from './_components/DemoYearFilter'
 import type { Farol, Natureza } from '@/types'
 import { getDeadlineBadge } from './_utils'
 import { DemoExportButtons } from './_components/DemoExportButtons'
@@ -27,23 +27,28 @@ const FAROL_FILTER_LABELS: Record<Farol, string> = {
 }
 
 export default function DemoDashboardPage() {
-  const { projects } = useDemoContext()
+  const { projects, selectedYear } = useDemoContext()
   const router = useRouter()
   const [farolFilter, setFarolFilter] = useState<FarolFilter>(null)
 
-  const total = projects.length
-  const mediaEvolucao = total > 0 ? Math.round(projects.reduce((a, p) => a + p.pct_evolucao, 0) / total) : 0
+  const yearProjects = projects.filter(p =>
+    p.data_fim_prevista &&
+    new Date(p.data_fim_prevista + 'T00:00:00').getFullYear() === selectedYear
+  )
+
+  const total = yearProjects.length
+  const mediaEvolucao = total > 0 ? Math.round(yearProjects.reduce((a, p) => a + p.pct_evolucao, 0) / total) : 0
   const porFarol = { verde: 0, amarelo: 0, vermelho: 0, azul: 0 } as Record<Farol, number>
   const porNatureza = { backoffice: 0, regulatorio: 0, negocios: 0, regional: 0 } as Record<Natureza, number>
-  projects.forEach(p => { porFarol[p.farol]++; porNatureza[p.natureza]++ })
-  const criticos = projects.filter(p => p.farol === 'vermelho')
-  const emRisco = projects.filter(p => p.farol === 'amarelo')
+  yearProjects.forEach(p => { porFarol[p.farol]++; porNatureza[p.natureza]++ })
+  const criticos = yearProjects.filter(p => p.farol === 'vermelho')
+  const emRisco = yearProjects.filter(p => p.farol === 'amarelo')
 
   const stats = { total, mediaEvolucao, porFarol, porNatureza, criticos, emRisco }
 
   const filteredProjects = farolFilter
-    ? projects.filter(p => p.farol === farolFilter)
-    : projects
+    ? yearProjects.filter(p => p.farol === farolFilter)
+    : yearProjects
 
   const insights = []
   if (criticos.length > 0) insights.push({ icon: '🚨', color: 'red' as const, title: 'Ação imediata necessária', desc: `${criticos.length} projeto${criticos.length > 1 ? 's' : ''} com farol vermelho. Convocar reuniões de crise.` })
@@ -72,6 +77,7 @@ export default function DemoDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <DemoYearFilter />
           <DemoExportButtons />
           <Link href="/demo/projetos/novo"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
@@ -103,17 +109,6 @@ export default function DemoDashboardPage() {
         </div>
       </div>
 
-      {/* Quarters */}
-      <div className="rounded-xl border overflow-hidden mb-5" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-          <span className="text-sm font-medium">Distribuição por Trimestre</span>
-          <span className="text-xs px-2 py-1 rounded-full font-mono" style={{ background: 'var(--bg4)', color: 'var(--text2)' }}>
-            {projects.filter(p => p.data_fim_prevista).length} com prazo definido
-          </span>
-        </div>
-        <div className="px-5 py-4"><QuartersChart projects={projects} /></div>
-      </div>
-
       {/* Charts */}
       <div className="grid gap-5 mb-5" style={{ gridTemplateColumns: '2fr 1fr' }}>
         <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
@@ -121,7 +116,7 @@ export default function DemoDashboardPage() {
             <span className="text-sm font-medium">Evolução por Projeto</span>
             <span className="text-xs px-2 py-1 rounded-full font-mono" style={{ background: 'var(--bg4)', color: 'var(--text2)' }}>{total} projetos</span>
           </div>
-          <div className="p-5"><BarChartProjects projects={projects} /></div>
+          <div className="p-5"><BarChartProjects projects={yearProjects} /></div>
         </div>
         <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
           <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
