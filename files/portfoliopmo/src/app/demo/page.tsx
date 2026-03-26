@@ -15,6 +15,7 @@ import { QuartersChart } from '@/components/charts/QuartersChart'
 import { InsightCard } from '@/components/ui/InsightCard'
 import type { Farol, Natureza } from '@/types'
 import { getDeadlineBadge } from './_utils'
+import { DemoExportButtons } from './_components/DemoExportButtons'
 
 type FarolFilter = Farol | null
 
@@ -70,11 +71,14 @@ export default function DemoDashboardPage() {
               : 'Nenhum projeto cadastrado ainda'}
           </p>
         </div>
-        <Link href="/demo/projetos/novo"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-          style={{ background: 'var(--accent)' }}>
-          + Novo Projeto
-        </Link>
+        <div className="flex items-center gap-3">
+          <DemoExportButtons />
+          <Link href="/demo/projetos/novo"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+            style={{ background: 'var(--accent)' }}>
+            + Novo Projeto
+          </Link>
+        </div>
       </div>
 
       {/* KPIs — clickable */}

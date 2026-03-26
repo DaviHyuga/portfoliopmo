@@ -10,6 +10,7 @@ import { QuartersChart } from '@/components/charts/QuartersChart'
 import { InsightCard } from '@/components/ui/InsightCard'
 import { FAROL_LABELS } from '@/types'
 import Link from 'next/link'
+import { ExportButtons } from '@/components/ui/ExportButtons'
 
 export const revalidate = 0 // sempre busca dados frescos
 
@@ -33,13 +34,16 @@ export default async function DashboardPage() {
               : 'Nenhum projeto cadastrado ainda'}
           </p>
         </div>
-        <Link
-          href="/projetos/novo"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-          style={{ background: 'var(--accent)' }}
-        >
-          + Novo Projeto
-        </Link>
+        <div className="flex items-center gap-3">
+          <ExportButtons />
+          <Link
+            href="/projetos/novo"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+            style={{ background: 'var(--accent)' }}
+          >
+            + Novo Projeto
+          </Link>
+        </div>
       </div>
 
       {/* KPIs */}
