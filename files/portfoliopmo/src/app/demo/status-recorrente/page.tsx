@@ -126,6 +126,7 @@ export default function StatusRecorrentePage() {
   const selectedWeekEnd   = getWeekEnd(selectedWeekStart)
   const isCurrentWeek     = selectedWeekStart === currentWeekStart
   const maxDay            = daysInMonth(filterYear, filterMonth)
+  const hasDataForWeek    = weeklyStatuses.some(s => s.week_start === selectedWeekStart)
 
   // Auto-resize sempre que o campo de edição abre ou o valor muda
   useEffect(() => {
@@ -312,6 +313,21 @@ export default function StatusRecorrentePage() {
           ))}
         </div>
       </div>
+
+      {/* ── No data banner ──────────────────────────────────────────────────── */}
+      {!hasDataForWeek && filteredProjects.length > 0 && (
+        <div className="rounded-xl border px-4 py-4 mb-4 flex items-center gap-3"
+          style={{ background: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.3)', color: '#818cf8' }}>
+          <span className="text-xl">📭</span>
+          <div>
+            <p className="text-sm font-medium">Nenhum registro para este período</p>
+            <p className="text-xs mt-0.5" style={{ opacity: 0.75 }}>
+              Não há dados para a semana de <strong>{formatDateBR(selectedWeekStart)}</strong> a <strong>{formatDateBR(selectedWeekEnd)}</strong>.
+              Selecione outra semana ou clique em uma célula para começar a preencher.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <div

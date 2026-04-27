@@ -132,6 +132,12 @@ export function StatusRecorrenteClient({
   const [saving,      setSaving]      = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Sincroniza localStatuses quando o servidor retorna dados de uma nova semana
+  useEffect(() => {
+    setLocalStatuses(initialStatuses)
+    setEditingCell(null)
+  }, [weekStart]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (editingCell && textareaRef.current) {
       autoResize(textareaRef.current)
@@ -146,6 +152,8 @@ export function StatusRecorrenteClient({
   const selectedWeekEnd    = getWeekEnd(selectedWeekStart)
   const isCurrentWeek      = selectedWeekStart === currentWeekStart
   const maxDay             = daysInMonth(filterYear, filterMonth)
+  // Há dados registrados para a semana exibida (weekStart = semana carregada pelo servidor)
+  const hasDataForWeek     = localStatuses.length > 0
 
   // Navigate to a different week (triggers server re-fetch via route)
   function navigateToWeek(newWeekStart: string) {
@@ -322,6 +330,21 @@ export function StatusRecorrenteClient({
           ))}
         </div>
       </div>
+
+      {/* No data banner */}
+      {!hasDataForWeek && filteredProjects.length > 0 && (
+        <div className="rounded-xl border px-4 py-4 mb-4 flex items-center gap-3"
+          style={{ background: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.3)', color: '#818cf8' }}>
+          <span className="text-xl">📭</span>
+          <div>
+            <p className="text-sm font-medium">Nenhum registro para este período</p>
+            <p className="text-xs mt-0.5" style={{ opacity: 0.75 }}>
+              Não há dados para a semana de <strong>{formatDateBR(weekStart)}</strong> a <strong>{formatDateBR(getWeekEnd(weekStart))}</strong>.
+              Selecione outra semana ou clique em uma célula para começar a preencher.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}>
