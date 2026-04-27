@@ -2,7 +2,7 @@
 // Funções de acesso a dados — usadas nas Server Actions e API Routes
 
 import { createClient } from './supabase/server'
-import type { Project, DashboardStats, Farol, Natureza } from '@/types'
+import type { Project, DashboardStats, Farol, Natureza, WeeklyStatus } from '@/types'
 
 export async function getOrganizationId(): Promise<string | null> {
   const supabase = createClient()
@@ -80,4 +80,31 @@ export async function getProjectHistory(projectId: string) {
     .limit(30)
 
   return data ?? []
+}
+
+export async function getWeeklyStatuses(weekStart?: string): Promise<WeeklyStatus[]> {
+  const supabase = createClient()
+  const orgId = await getOrganizationId()
+  if (!orgId) return []
+
+  // Get project IDs for this org
+  const { data: projectRows } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('organization_id', orgId)
+
+  const projectIds = (projectRows ?? []).map(p => p.id)
+  if (projectIds.length === 0) return []
+
+  let query = supabase
+    .from('weekly_statuses')
+    .select('*')
+    .in('project_id', projectIds)
+    .order('week_start', { ascending: false })
+
+  if (weekStart) query = query.eq('week_start', weekStart)
+
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []) as WeeklyStatus[]
 }

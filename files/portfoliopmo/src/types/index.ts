@@ -30,6 +30,18 @@ export interface ProjectSnapshot {
   snapshot_at: string
 }
 
+export interface WeeklyStatus {
+  id: string
+  project_id: string
+  week_start: string // 'YYYY-MM-DD' — Monday da semana
+  progresso: string
+  proximos_passos: string
+  riscos: string
+  acoes_mitigacao: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Organization {
   id: string
   name: string

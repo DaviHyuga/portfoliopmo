@@ -4,6 +4,18 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { Project } from '@/types'
 
+export interface WeeklyStatus {
+  id: string
+  project_id: string
+  week_start: string // 'YYYY-MM-DD' — Monday da semana
+  progresso: string
+  proximos_passos: string
+  riscos: string
+  acoes_mitigacao: string
+  created_at: string
+  updated_at: string
+}
+
 const INITIAL_PROJECTS: Project[] = [
   // ── Azul 2025 Q1 ──
   {
@@ -178,6 +190,143 @@ const INITIAL_PROJECTS: Project[] = [
   },
 ]
 
+// Semana atual (2026-04-21) e anterior (2026-04-14)
+const W1 = '2026-04-14'
+const W2 = '2026-04-21'
+
+const INITIAL_WEEKLY_STATUSES: WeeklyStatus[] = [
+  // ── Semana 14/04 ──────────────────────────────────────────────────────────
+  {
+    id: 'ws-1-w1', project_id: '1', week_start: W1,
+    progresso: 'Pipelines validados em 78%\nCamada de ingestão 90% completa\nGovernança de dados ainda não iniciada',
+    proximos_passos: 'Finalizar validação dos pipelines restantes\nIniciar módulo de governança de dados',
+    riscos: 'Dados legados com qualidade inconsistente\nDependência de aprovação do Comitê de TI',
+    acoes_mitigacao: 'Mapeamento dos registros corrompidos em andamento\nReunião com Comitê agendada para 16/04',
+    created_at: W1 + 'T10:00:00Z', updated_at: W1 + 'T10:00:00Z',
+  },
+  {
+    id: 'ws-2-w1', project_id: '2', week_start: W1,
+    progresso: 'Módulo omnichannel 60% implementado\nIA de personalização em fase de testes\nIntegração com CRM legado não iniciada',
+    proximos_passos: 'Concluir testes da IA de personalização\nIniciar integração com CRM legado',
+    riscos: 'Resistência do time de atendimento ao novo sistema\nInstabilidade na API legada do CRM',
+    acoes_mitigacao: 'Workshop de capacitação agendado para 17/04\nAbertura de incidente com fornecedor do CRM',
+    created_at: W1 + 'T10:00:00Z', updated_at: W1 + 'T10:00:00Z',
+  },
+  {
+    id: 'ws-4-w1', project_id: '4', week_start: W1,
+    progresso: 'Evolução em 38% — sem avanço na semana\nMódulo de contas a pagar em finalização\nConciliação automática bloqueada por inconsistências de dados',
+    proximos_passos: 'Resolver inconsistências de dados com o fornecedor\nRetomar implementação da conciliação automática',
+    riscos: 'Fornecedor com 3 semanas de atraso acumulado\nEscopo ampliado pelo sponsor sem replanejamento formal',
+    acoes_mitigacao: 'Reunião de crise com fornecedor agendada para 15/04\nSponsor ciente e envolvido',
+    created_at: W1 + 'T10:00:00Z', updated_at: W1 + 'T10:00:00Z',
+  },
+  {
+    id: 'ws-5-w1', project_id: '5', week_start: W1,
+    progresso: 'Assinatura digital integrada com sucesso\nTestes de aceitação do usuário (UAT) em andamento\nEvolução em 91%',
+    proximos_passos: 'Finalizar UAT com aprovação dos usuários-chave\nPrepara ambiente de produção para deploy',
+    riscos: 'Validação jurídica ainda pendente para contratos digitais',
+    acoes_mitigacao: 'Jurídico comprometeu retorno até 16/04',
+    created_at: W1 + 'T10:00:00Z', updated_at: W1 + 'T10:00:00Z',
+  },
+  {
+    id: 'ws-6-w1', project_id: '6', week_start: W1,
+    progresso: '8 de 15 workloads migrados (54%)\nJanelas de migração respeitadas sem incidentes',
+    proximos_passos: 'Migrar workloads de missão crítica na semana de 14/04\nCertificar 2 membros do time interno',
+    riscos: 'Falta de certificação técnica de 2 membros do time interno\nRisco de indisponibilidade em workloads críticos',
+    acoes_mitigacao: 'Treinamento acelerado com certificação prevista para 20/04\nChecklist de rollback atualizado',
+    created_at: W1 + 'T10:00:00Z', updated_at: W1 + 'T10:00:00Z',
+  },
+  {
+    id: 'ws-8-w1', project_id: '8', week_start: W1,
+    progresso: '2 escritórios abertos: Fortaleza e Recife\nContratos de Salvador em revisão jurídica\nEvolução em 48%',
+    proximos_passos: 'Assinar contratos de Salvador e iniciar processo de Manaus\nAcelerar contratações nas regiões-alvo',
+    riscos: 'Dificuldade em contratar talentos sênior na região Norte',
+    acoes_mitigacao: 'Parceria com headhunter regional ativada\nBusca ampliada para talentos em regime remoto',
+    created_at: W1 + 'T10:00:00Z', updated_at: W1 + 'T10:00:00Z',
+  },
+  {
+    id: 'ws-9-w1', project_id: '9', week_start: W1,
+    progresso: 'Evolução em 25% — abaixo do planejado\nModelos preditivos em desenvolvimento inicial\nBase histórica insuficiente para 3 novos segmentos',
+    proximos_passos: 'Completar análise da base histórica disponível\nIniciar testes com segmentos já consolidados',
+    riscos: 'Aprovação regulatória da SUSEP ainda não iniciada\nDados insuficientes para modelagem de novos segmentos',
+    acoes_mitigacao: 'Dossier regulatório em preparação\nParceria com segurador para dados históricos em negociação',
+    created_at: W1 + 'T10:00:00Z', updated_at: W1 + 'T10:00:00Z',
+  },
+  {
+    id: 'ws-10-w1', project_id: '10', week_start: W1,
+    progresso: '6 squads certificados em metodologia ágil\n3 rituais de gestão implementados\nEvolução em 73%',
+    proximos_passos: 'Certificar os 2 últimos squads\nAvaliar resultados com a liderança sênior',
+    riscos: 'Resistência de 2 gestores sênior ao modelo ágil',
+    acoes_mitigacao: 'Sessões de coaching individuais com gestores resistentes\nApresentação de resultados parciais para a liderança',
+    created_at: W1 + 'T10:00:00Z', updated_at: W1 + 'T10:00:00Z',
+  },
+  // ── Semana 21/04 — Status Atual ───────────────────────────────────────────
+  {
+    id: 'ws-1-w2', project_id: '1', week_start: W2,
+    progresso: 'Pipelines 95% validados\nMódulo de governança iniciado\nPreparação para Go-Live em 30/04',
+    proximos_passos: 'Encerrar validação dos últimos pipelines\nRealizar testes finais de governança\nAgendar janela de Go-Live',
+    riscos: 'Risco de indisponibilidade durante a migração final',
+    acoes_mitigacao: 'Janela de manutenção agendada para madrugada de 28/04\nEquipe de plantão durante a migração',
+    created_at: W2 + 'T09:00:00Z', updated_at: W2 + 'T09:00:00Z',
+  },
+  {
+    id: 'ws-2-w2', project_id: '2', week_start: W2,
+    progresso: 'IA de personalização validada com sucesso\nIntegração CRM 70% concluída\nPiloto com clientes em planejamento',
+    proximos_passos: 'Finalizar integração com CRM legado\nIniciar piloto com 200 clientes selecionados',
+    riscos: 'API legada de CRM com timeout intermitente\nPossível instabilidade durante o piloto',
+    acoes_mitigacao: 'Time técnico abrindo incidente com fornecedor do CRM\nCircuito de fallback implementado',
+    created_at: W2 + 'T09:00:00Z', updated_at: W2 + 'T09:00:00Z',
+  },
+  {
+    id: 'ws-4-w2', project_id: '4', week_start: W2,
+    progresso: 'Evolução em 38% — sem avanço pela 2ª semana consecutiva\nAguardando hotfix crítico do fornecedor',
+    proximos_passos: 'Receber e validar hotfix do fornecedor\nReplanilhar cronograma com sponsor',
+    riscos: 'Risco real de não entrega no Q2\nSponsor solicitou escalonamento para diretoria',
+    acoes_mitigacao: 'Escalonado para diretoria na última sexta\nContrato em revisão com inclusão de cláusula de multa',
+    created_at: W2 + 'T09:00:00Z', updated_at: W2 + 'T09:00:00Z',
+  },
+  {
+    id: 'ws-5-w2', project_id: '5', week_start: W2,
+    progresso: 'UAT concluída com aprovação de todos os usuários-chave\nEvolução em 95%\nAguardando validação jurídica final',
+    proximos_passos: 'Obter sign-off jurídico até 23/04\nRealizar deploy em produção em 24/04',
+    riscos: 'Atraso no Go-Live se jurídico não aprovar até 23/04',
+    acoes_mitigacao: 'Reunião de alinhamento jurídico agendada para 22/04\nGerente do projeto acompanhando pessoalmente',
+    created_at: W2 + 'T09:00:00Z', updated_at: W2 + 'T09:00:00Z',
+  },
+  {
+    id: 'ws-6-w2', project_id: '6', week_start: W2,
+    progresso: '11 de 15 workloads migrados (58%)\n1 incidente de indisponibilidade de 12 min registrado\nWorkloads críticos iniciados',
+    proximos_passos: 'Concluir migração dos workloads críticos restantes\nDocumentar lições aprendidas do incidente',
+    riscos: 'Incidente de indisponibilidade pode se repetir nas próximas janelas',
+    acoes_mitigacao: 'Runbook atualizado com novos procedimentos\nPróxima janela com checklist aprimorado e equipe reforçada',
+    created_at: W2 + 'T09:00:00Z', updated_at: W2 + 'T09:00:00Z',
+  },
+  {
+    id: 'ws-8-w2', project_id: '8', week_start: W2,
+    progresso: 'Contrato de Salvador assinado\nProcesso seletivo de Manaus em andamento\nEvolução em 50%',
+    proximos_passos: 'Iniciar estruturação física do escritório de Manaus\nContratar gestor local',
+    riscos: 'Cronograma de Manaus com risco de atraso de 3 semanas',
+    acoes_mitigacao: 'Gestor local identificado como candidato prioritário\nInício previsto para 28/04',
+    created_at: W2 + 'T09:00:00Z', updated_at: W2 + 'T09:00:00Z',
+  },
+  {
+    id: 'ws-9-w2', project_id: '9', week_start: W2,
+    progresso: 'Evolução em 25% — sem avanço técnico\nAguardando dados de parceiro externo',
+    proximos_passos: 'Receber base histórica do parceiro externo\nRetomar modelagem preditiva com novos dados',
+    riscos: 'Parceiro externo atrasando fornecimento de dados\nRisco de replanejamento total do prazo',
+    acoes_mitigacao: 'Sponsor enviando ofício formal ao parceiro\nAlternativa de dataset público sendo avaliada',
+    created_at: W2 + 'T09:00:00Z', updated_at: W2 + 'T09:00:00Z',
+  },
+  {
+    id: 'ws-10-w2', project_id: '10', week_start: W2,
+    progresso: '7 squads certificados em metodologia ágil\nResultados positivos apresentados à diretoria\nEvolução em 76%',
+    proximos_passos: 'Certificar o último squad restante\nPreparar apresentação de resultados para o Q2',
+    riscos: 'Risco de regressão com saída do coach externo prevista para maio',
+    acoes_mitigacao: 'Processo de internalização do conhecimento em andamento\nIdentificação de coach interno em curso',
+    created_at: W2 + 'T09:00:00Z', updated_at: W2 + 'T09:00:00Z',
+  },
+]
+
 export interface DemoUser {
   id: string
   name: string
@@ -198,6 +347,7 @@ type ProjectInput = Omit<Project, 'id' | 'organization_id' | 'created_at' | 'upd
 interface DemoContextType {
   projects: Project[]
   users: DemoUser[]
+  weeklyStatuses: WeeklyStatus[]
   selectedYear: number
   setSelectedYear: (year: number) => void
   addProject: (data: ProjectInput) => void
@@ -206,6 +356,11 @@ interface DemoContextType {
   addUser: (user: Omit<DemoUser, 'id'>) => void
   removeUser: (id: string) => void
   updateUserRole: (id: string, role: DemoUser['role']) => void
+  upsertWeeklyStatus: (
+    projectId: string,
+    weekStart: string,
+    data: Partial<Pick<WeeklyStatus, 'progresso' | 'proximos_passos' | 'riscos' | 'acoes_mitigacao'>>
+  ) => void
   resetDemo: () => void
 }
 
@@ -214,19 +369,23 @@ const DemoContext = createContext<DemoContextType | null>(null)
 export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS)
   const [users, setUsers] = useState<DemoUser[]>(INITIAL_USERS)
+  const [weeklyStatuses, setWeeklyStatuses] = useState<WeeklyStatus[]>(INITIAL_WEEKLY_STATUSES)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
 
   // Carrega do localStorage
   useEffect(() => {
     const savedProjects = localStorage.getItem('demo_projects')
     const savedUsers = localStorage.getItem('demo_users')
+    const savedWeeklyStatuses = localStorage.getItem('demo_weekly_statuses')
     if (savedProjects) setProjects(JSON.parse(savedProjects))
     if (savedUsers) setUsers(JSON.parse(savedUsers))
+    if (savedWeeklyStatuses) setWeeklyStatuses(JSON.parse(savedWeeklyStatuses))
   }, [])
 
   // Salva no localStorage a cada mudança
   useEffect(() => { localStorage.setItem('demo_projects', JSON.stringify(projects)) }, [projects])
   useEffect(() => { localStorage.setItem('demo_users', JSON.stringify(users)) }, [users])
+  useEffect(() => { localStorage.setItem('demo_weekly_statuses', JSON.stringify(weeklyStatuses)) }, [weeklyStatuses])
 
   const addProject = useCallback((data: ProjectInput) => {
     const now = new Date().toISOString()
@@ -253,15 +412,44 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u))
   }, [])
 
+  const upsertWeeklyStatus = useCallback((
+    projectId: string,
+    weekStart: string,
+    data: Partial<Pick<WeeklyStatus, 'progresso' | 'proximos_passos' | 'riscos' | 'acoes_mitigacao'>>
+  ) => {
+    const now = new Date().toISOString()
+    setWeeklyStatuses(prev => {
+      const idx = prev.findIndex(s => s.project_id === projectId && s.week_start === weekStart)
+      if (idx >= 0) {
+        const updated = [...prev]
+        updated[idx] = { ...updated[idx], ...data, updated_at: now }
+        return updated
+      }
+      return [...prev, {
+        id: crypto.randomUUID(),
+        project_id: projectId,
+        week_start: weekStart,
+        progresso: data.progresso ?? '',
+        proximos_passos: data.proximos_passos ?? '',
+        riscos: data.riscos ?? '',
+        acoes_mitigacao: data.acoes_mitigacao ?? '',
+        created_at: now,
+        updated_at: now,
+      }]
+    })
+  }, [])
+
   const resetDemo = useCallback(() => {
     localStorage.removeItem('demo_projects')
     localStorage.removeItem('demo_users')
+    localStorage.removeItem('demo_weekly_statuses')
     setProjects(INITIAL_PROJECTS)
     setUsers(INITIAL_USERS)
+    setWeeklyStatuses(INITIAL_WEEKLY_STATUSES)
   }, [])
 
   return (
-    <DemoContext.Provider value={{ projects, users, selectedYear, setSelectedYear, addProject, updateProject, deleteProject, addUser, removeUser, updateUserRole, resetDemo }}>
+    <DemoContext.Provider value={{ projects, users, weeklyStatuses, selectedYear, setSelectedYear, addProject, updateProject, deleteProject, addUser, removeUser, updateUserRole, upsertWeeklyStatus, resetDemo }}>
       {children}
     </DemoContext.Provider>
   )

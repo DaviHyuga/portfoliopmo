@@ -125,6 +125,33 @@ export async function removeMember(memberId: string) {
   revalidatePath('/configuracoes')
 }
 
+// ─── Status Recorrente ────────────────────────────────────────────────────────
+
+export async function upsertWeeklyStatus(
+  projectId: string,
+  weekStart: string,
+  data: { progresso?: string; proximos_passos?: string; riscos?: string; acoes_mitigacao?: string }
+) {
+  const supabase = createClient()
+
+  const payload = {
+    project_id: projectId,
+    week_start: weekStart,
+    progresso:        data.progresso        ?? '',
+    proximos_passos:  data.proximos_passos  ?? '',
+    riscos:           data.riscos           ?? '',
+    acoes_mitigacao:  data.acoes_mitigacao  ?? '',
+    updated_at:       new Date().toISOString(),
+  }
+
+  const { error } = await supabase
+    .from('weekly_statuses')
+    .upsert(payload, { onConflict: 'project_id,week_start' })
+
+  if (error) throw new Error(error.message)
+  revalidatePath('/status-recorrente')
+}
+
 // ─── Auth: Login ─────────────────────────────────────────────────────────────
 
 export async function signIn(email: string, password: string): Promise<{ error: string | null }> {

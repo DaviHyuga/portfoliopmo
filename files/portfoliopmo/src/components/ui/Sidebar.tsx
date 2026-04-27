@@ -6,11 +6,12 @@ import { usePathname } from 'next/navigation'
 import { signOut } from '@/lib/actions'
 
 const NAV = [
-  { href: '/dashboard',     icon: '▦', label: 'Dashboard' },
-  { href: '/projetos',      icon: '✦', label: 'Projetos' },
-  { href: '/entregues',     icon: '📦', label: 'Proj. Entregues' },
-  { href: '/insights',      icon: '◈', label: 'Insights' },
-  { href: '/configuracoes', icon: '⚙', label: 'Configurações' },
+  { href: '/dashboard',          icon: '▦', label: 'Dashboard' },
+  { href: '/projetos',           icon: '✦', label: 'Projetos' },
+  { href: '/entregues',          icon: '📦', label: 'Proj. Entregues' },
+  { href: '/status-recorrente',  icon: '📋', label: 'Status Recorrente' },
+  { href: '/insights',           icon: '◈', label: 'Insights' },
+  { href: '/configuracoes',      icon: '⚙', label: 'Configurações' },
 ]
 
 interface SidebarProps {

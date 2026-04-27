@@ -8,6 +8,7 @@ interface ConfirmModalProps {
   onConfirm: () => void
   onCancel: () => void
   confirmLabel?: string
+  cancelLabel?: string
   danger?: boolean
 }
 
@@ -18,6 +19,7 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
   confirmLabel = 'Confirmar',
+  cancelLabel = 'Cancelar',
   danger = false,
 }: ConfirmModalProps) {
   if (!isOpen) return null
@@ -82,7 +84,7 @@ export function ConfirmModal({
               fontWeight: 500,
             }}
           >
-            Cancelar
+            {cancelLabel}
           </button>
           <button
             onClick={onConfirm}

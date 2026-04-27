@@ -8,11 +8,12 @@ import { DemoProvider, useDemoContext } from './context'
 import { ToastProvider } from './_components/Toast'
 
 const NAV = [
-  { href: '/demo',               icon: '▦', label: 'Dashboard' },
-  { href: '/demo/projetos',      icon: '✦', label: 'Projetos' },
-  { href: '/demo/entregues',     icon: '📦', label: 'Proj. Entregues' },
-  { href: '/demo/insights',      icon: '◈', label: 'Insights' },
-  { href: '/demo/configuracoes', icon: '⚙', label: 'Configurações' },
+  { href: '/demo',                        icon: '▦', label: 'Dashboard' },
+  { href: '/demo/projetos',               icon: '✦', label: 'Projetos' },
+  { href: '/demo/entregues',              icon: '📦', label: 'Proj. Entregues' },
+  { href: '/demo/status-recorrente',      icon: '📋', label: 'Status Recorrente' },
+  { href: '/demo/insights',               icon: '◈', label: 'Insights' },
+  { href: '/demo/configuracoes',          icon: '⚙', label: 'Configurações' },
 ]
 
 function DemoSidebar({ onClose }: { onClose?: () => void }) {
