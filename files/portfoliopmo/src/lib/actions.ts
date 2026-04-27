@@ -133,23 +133,50 @@ export async function upsertWeeklyStatus(
   data: { progresso?: string; proximos_passos?: string; riscos?: string; acoes_mitigacao?: string }
 ) {
   const supabase = createClient()
+  const now = new Date().toISOString()
 
-  const payload = {
-    project_id: projectId,
-    week_start: weekStart,
-    progresso:        data.progresso        ?? '',
-    proximos_passos:  data.proximos_passos  ?? '',
-    riscos:           data.riscos           ?? '',
-    acoes_mitigacao:  data.acoes_mitigacao  ?? '',
-    updated_at:       new Date().toISOString(),
+  // Verifica se já existe registro para este projeto/semana
+  const { data: existing, error: selectError } = await supabase
+    .from('weekly_statuses')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('week_start', weekStart)
+    .maybeSingle()
+
+  if (selectError) throw new Error(selectError.message)
+
+  if (existing) {
+    // UPDATE parcial — só os campos fornecidos (preserva os demais)
+    const updates: Record<string, string> = { updated_at: now }
+    if (data.progresso       !== undefined) updates.progresso       = data.progresso
+    if (data.proximos_passos !== undefined) updates.proximos_passos = data.proximos_passos
+    if (data.riscos          !== undefined) updates.riscos          = data.riscos
+    if (data.acoes_mitigacao !== undefined) updates.acoes_mitigacao = data.acoes_mitigacao
+
+    const { error } = await supabase
+      .from('weekly_statuses')
+      .update(updates)
+      .eq('id', existing.id)
+
+    if (error) throw new Error(error.message)
+  } else {
+    // INSERT — novo registro com todos os campos (não preenchidos = '')
+    const { error } = await supabase
+      .from('weekly_statuses')
+      .insert({
+        project_id:      projectId,
+        week_start:      weekStart,
+        progresso:       data.progresso       ?? '',
+        proximos_passos: data.proximos_passos ?? '',
+        riscos:          data.riscos          ?? '',
+        acoes_mitigacao: data.acoes_mitigacao ?? '',
+        created_at:      now,
+        updated_at:      now,
+      })
+
+    if (error) throw new Error(error.message)
   }
 
-  const { error } = await supabase
-    .from('weekly_statuses')
-    .upsert(payload, { onConflict: 'project_id,week_start' })
-
-  // Se a migration ainda não foi aplicada, não quebra o app
-  if (error) throw new Error(`Status Recorrente: tabela não encontrada. Aplique a migration 003_weekly_statuses.sql no Supabase. Detalhe: ${error.message}`)
   revalidatePath('/status-recorrente')
 }
 
