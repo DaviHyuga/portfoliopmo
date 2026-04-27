@@ -148,7 +148,8 @@ export async function upsertWeeklyStatus(
     .from('weekly_statuses')
     .upsert(payload, { onConflict: 'project_id,week_start' })
 
-  if (error) throw new Error(error.message)
+  // Se a migration ainda não foi aplicada, não quebra o app
+  if (error) throw new Error(`Status Recorrente: tabela não encontrada. Aplique a migration 003_weekly_statuses.sql no Supabase. Detalhe: ${error.message}`)
   revalidatePath('/status-recorrente')
 }
 

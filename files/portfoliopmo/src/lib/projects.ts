@@ -105,6 +105,7 @@ export async function getWeeklyStatuses(weekStart?: string): Promise<WeeklyStatu
   if (weekStart) query = query.eq('week_start', weekStart)
 
   const { data, error } = await query
-  if (error) throw error
+  // Retorna vazio se a tabela ainda não existe (migration pendente)
+  if (error) return []
   return (data ?? []) as WeeklyStatus[]
 }
