@@ -19,7 +19,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .from('organization_members')
     .select('organization_id, role, status')
     .eq('user_id', user.id)
-    .single()
+    .limit(1)
+    .maybeSingle()
 
   if (!statusError && memberWithStatus) {
     member = memberWithStatus
@@ -29,7 +30,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .from('organization_members')
       .select('organization_id, role')
       .eq('user_id', user.id)
-      .single()
+      .limit(1)
+      .maybeSingle()
     member = memberBase
   }
 
