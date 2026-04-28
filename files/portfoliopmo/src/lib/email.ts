@@ -10,7 +10,7 @@ function getResend(): Resend | null {
   return new Resend(key)
 }
 
-const FROM = 'PortfolioPMO <onboarding@resend.dev>'
+const FROM = process.env.RESEND_FROM_EMAIL ?? 'PortfolioPMO <onboarding@resend.dev>'
 const SITE = () => process.env.NEXT_PUBLIC_SITE_URL ?? 'https://portfoliopmo.vercel.app'
 
 // ─── Notificação para admins: novo pedido de acesso ───────────────────────────
