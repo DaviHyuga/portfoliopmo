@@ -3,6 +3,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createClient } from './supabase/server'
 import { createServiceClient } from './supabase/service'
 import { getOrganizationId } from './projects'
@@ -221,9 +222,17 @@ export async function signUp(
     return { error: 'Senha fraca. Use no mínimo 8 caracteres, 1 letra maiúscula e 1 número.' }
   }
 
-  // 3. Create the Supabase Auth user (sends verification e-mail automatically)
-  const supabase = createClient()
-  const { data, error: authError } = await supabase.auth.signUp({
+  // 3. Create the Supabase Auth user using a SESSION-FREE client.
+  //    CRITICAL: never use createClient() (SSR/cookie-aware) here — if an admin
+  //    is already logged in, their session cookies contaminate the signUp call
+  //    and Supabase returns the admin's user data instead of creating a new user.
+  const freshAuth = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  )
+
+  const { data, error: authError } = await freshAuth.auth.signUp({
     email,
     password,
     options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` },
@@ -244,7 +253,6 @@ export async function signUp(
     } catch { /* ignore, userId stays null */ }
 
     if (!userId) {
-      // Truly unrecoverable auth error
       if (authError) return { error: authError.message }
       return { error: null }
     }
@@ -257,8 +265,6 @@ export async function signUp(
   //    (email not confirmed) and RLS would block the insert.
   const orgSlug = process.env.DEFAULT_ORG_SLUG
   if (!orgSlug) {
-    // No default org configured — user will go through /onboarding after
-    // confirming email (backward-compatible behavior).
     return { error: null }
   }
 
@@ -271,9 +277,23 @@ export async function signUp(
       .eq('slug', orgSlug)
       .single()
 
-    if (!org) return { error: null } // Org not yet created — onboarding flow
+    if (!org) return { error: null }
 
-    // Upsert: if membership was deleted and user re-registers, restore it
+    // Guard: never overwrite an already-active membership
+    // (prevents admin from accidentally setting their own record to pending)
+    const { data: existing } = await service
+      .from('organization_members')
+      .select('id, status')
+      .eq('organization_id', org.id)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (existing?.status === 'active') {
+      // User already has access — let them log in normally
+      return { error: null }
+    }
+
+    // Insert or restore a pending membership
     const { data: upsertedMember, error: insertError } = await service
       .from('organization_members')
       .upsert(
