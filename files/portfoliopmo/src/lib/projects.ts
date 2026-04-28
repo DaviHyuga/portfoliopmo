@@ -2,7 +2,19 @@
 // Funções de acesso a dados — usadas nas Server Actions e API Routes
 
 import { createClient } from './supabase/server'
+import { createServiceClient } from './supabase/service'
 import type { Project, DashboardStats, Farol, Natureza, WeeklyStatus } from '@/types'
+
+// Returns a service-role client with a safe fallback to the anon client.
+// The service client bypasses RLS; access is scoped by passing orgId / userId
+// explicitly in every query — never expose this client to the browser.
+function getServerQueryClient() {
+  try {
+    return createServiceClient()
+  } catch {
+    return createClient()
+  }
+}
 
 export async function getOrganizationId(): Promise<string | null> {
   const supabase = createClient()
@@ -26,17 +38,16 @@ export async function getOrganizationId(): Promise<string | null> {
 }
 
 export async function getProjects(): Promise<Project[]> {
-  const supabase = createClient()
   const orgId = await getOrganizationId()
   if (!orgId) return []
 
-  const { data, error } = await supabase
+  const db = getServerQueryClient()
+  const { data } = await db
     .from('projects')
     .select('*')
     .eq('organization_id', orgId)
     .order('created_at', { ascending: false })
 
-  if (error) throw error
   return (data ?? []) as Project[]
 }
 
@@ -90,12 +101,13 @@ export async function getProjectHistory(projectId: string) {
 }
 
 export async function getWeeklyStatuses(weekStart?: string): Promise<WeeklyStatus[]> {
-  const supabase = createClient()
   const orgId = await getOrganizationId()
   if (!orgId) return []
 
+  const db = getServerQueryClient()
+
   // Get project IDs for this org
-  const { data: projectRows } = await supabase
+  const { data: projectRows } = await db
     .from('projects')
     .select('id')
     .eq('organization_id', orgId)
@@ -103,7 +115,7 @@ export async function getWeeklyStatuses(weekStart?: string): Promise<WeeklyStatu
   const projectIds = (projectRows ?? []).map(p => p.id)
   if (projectIds.length === 0) return []
 
-  let query = supabase
+  let query = db
     .from('weekly_statuses')
     .select('*')
     .in('project_id', projectIds)
