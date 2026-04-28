@@ -243,8 +243,29 @@ export async function signUp(
     password,
     options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` },
   })
-  if (authError) return { error: authError.message }
-  if (!data.user) return { error: 'Erro ao criar usuário. Tente novamente.' }
+
+  // Resolve the user ID — handle three scenarios:
+  //  a) Fresh signup: data.user.id is set and identities is non-empty
+  //  b) Existing unconfirmed user: Supabase returns user but identities=[] (no error)
+  //  c) Existing confirmed user: Supabase returns "User already registered" error
+  let userId: string | null = data.user?.id ?? null
+
+  if (authError || (data.user && (data.user.identities ?? []).length === 0)) {
+    // User already exists in auth.users — look up their ID via service client
+    try {
+      const service = createServiceClient()
+      const { data: foundId } = await service.rpc('get_user_id_by_email', { user_email: email })
+      userId = (foundId as string | null) ?? null
+    } catch { /* ignore, userId stays null */ }
+
+    if (!userId) {
+      // Truly unrecoverable auth error
+      if (authError) return { error: authError.message }
+      return { error: null }
+    }
+  }
+
+  if (!userId) return { error: 'Erro ao criar usuário. Tente novamente.' }
 
   // 4. Insert organization_members record with pending_approval status.
   //    We use the service-role client because the user has no session yet
@@ -267,20 +288,21 @@ export async function signUp(
 
     if (!org) return { error: null } // Org not yet created — onboarding flow
 
+    // Upsert: if membership was deleted and user re-registers, restore it
     const { error: insertError } = await service
       .from('organization_members')
-      .insert({
-        organization_id: org.id,
-        user_id: data.user.id,
-        nome: nome.trim(),
-        role,
-        status: 'pending_approval',
-      })
+      .upsert(
+        {
+          organization_id: org.id,
+          user_id: userId,
+          nome: nome.trim(),
+          role,
+          status: 'pending_approval',
+        },
+        { onConflict: 'organization_id,user_id', ignoreDuplicates: false }
+      )
 
-    if (insertError && insertError.code !== '23505') {
-      // 23505 = unique violation (already registered) — treat as success
-      return { error: insertError.message }
-    }
+    if (insertError) return { error: insertError.message }
 
     // Notify all admins of the new pending request (fire-and-forget)
     const { data: adminRows } = await service
