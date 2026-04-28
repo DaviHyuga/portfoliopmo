@@ -10,29 +10,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect('/login')
 
-  // Fetch member record. We try with the `status` column (migration 004).
-  // If that column doesn't exist yet (migration pending), we fall back to a
-  // query without it so existing admins are never accidentally locked out.
-  let member: { organization_id: string; role: string; status?: string } | null = null
+  // Use SECURITY DEFINER RPC to bypass RLS for membership lookup.
+  // Direct table queries via SSR can fail when auth.uid() isn't propagated
+  // to the DB context — this function pattern is proven reliable in this app.
+  type MemberRow = { organization_id: string; role: string; status: string }
+  let member: MemberRow | null = null
 
-  const { data: memberWithStatus, error: statusError } = await supabase
-    .from('organization_members')
-    .select('organization_id, role, status')
-    .eq('user_id', user.id)
-    .limit(1)
-    .maybeSingle()
+  const { data: memberRows } = await supabase.rpc('get_my_membership')
+  member = (memberRows as MemberRow[] | null)?.[0] ?? null
 
-  if (!statusError && memberWithStatus) {
-    member = memberWithStatus
-  } else {
-    // Fallback: status column may not exist yet — query without it
-    const { data: memberBase } = await supabase
+  // Fallback: if function not yet created, try direct query
+  if (!member) {
+    const { data: fallback } = await supabase
       .from('organization_members')
-      .select('organization_id, role')
+      .select('organization_id, role, status')
       .eq('user_id', user.id)
       .limit(1)
       .maybeSingle()
-    member = memberBase
+    member = fallback as MemberRow | null
   }
 
   if (!member) redirect('/onboarding')
