@@ -72,8 +72,7 @@ export default function LoginPage() {
         setLoading(false)
       } else {
         setSuccess(
-          'Cadastro realizado! Verifique seu e-mail para confirmar a conta. ' +
-          'Após a confirmação, aguarde a aprovação de um administrador para acessar o sistema.'
+          'Solicitação enviada! Aguarde a aprovação de um administrador para acessar o sistema.'
         )
         setLoading(false)
       }

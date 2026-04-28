@@ -222,41 +222,40 @@ export async function signUp(
     return { error: 'Senha fraca. Use no mínimo 8 caracteres, 1 letra maiúscula e 1 número.' }
   }
 
-  // 3. Create the Supabase Auth user using a SESSION-FREE client.
-  //    CRITICAL: never use createClient() (SSR/cookie-aware) here — if an admin
-  //    is already logged in, their session cookies contaminate the signUp call
-  //    and Supabase returns the admin's user data instead of creating a new user.
-  const freshAuth = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } }
-  )
+  // 3. Create (or locate) the Supabase Auth user via the admin API.
+  //    Using service.auth.admin.createUser() is fully session-independent —
+  //    no cookies, no risk of contamination from a logged-in admin.
+  //    email_confirm: true skips the email verification step; admin approval
+  //    is the security gate for this application.
+  const service0 = createServiceClient()
+  let userId: string | null = null
 
-  const { data, error: authError } = await freshAuth.auth.signUp({
+  const { data: newUser, error: createError } = await service0.auth.admin.createUser({
     email,
     password,
-    options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` },
+    email_confirm: true,
   })
 
-  // Resolve the user ID — handle three scenarios:
-  //  a) Fresh signup: data.user.id is set and identities is non-empty
-  //  b) Existing unconfirmed user: Supabase returns user but identities=[] (no error)
-  //  c) Existing confirmed user: Supabase returns "User already registered" error
-  let userId: string | null = data.user?.id ?? null
-
-  if (authError || (data.user && (data.user.identities ?? []).length === 0)) {
-    // User already exists in auth.users — look up their ID via service client
-    try {
-      const service = createServiceClient()
-      const { data: foundId } = await service.rpc('get_user_id_by_email', { user_email: email })
-      userId = (foundId as string | null) ?? null
-    } catch { /* ignore, userId stays null */ }
-
+  if (createError) {
+    // User already exists → look up their ID
+    const alreadyExists =
+      createError.message.toLowerCase().includes('already') ||
+      createError.status === 422
+    if (!alreadyExists) {
+      console.error('[signUp] admin.createUser error:', createError)
+      return { error: createError.message }
+    }
+    const { data: foundId } = await service0.rpc('get_user_id_by_email', { user_email: email })
+    userId = (foundId as string | null) ?? null
     if (!userId) {
-      if (authError) return { error: authError.message }
+      console.error('[signUp] get_user_id_by_email returned null for', email)
       return { error: null }
     }
+  } else {
+    userId = newUser.user?.id ?? null
   }
+
+  console.log('[signUp] resolved userId:', userId, 'for email:', email)
 
   if (!userId) return { error: 'Erro ao criar usuário. Tente novamente.' }
 
@@ -269,32 +268,35 @@ export async function signUp(
   }
 
   try {
-    const service = createServiceClient()
-
-    const { data: org } = await service
+    const { data: org } = await service0
       .from('organizations')
       .select('id')
       .eq('slug', orgSlug)
       .single()
 
-    if (!org) return { error: null }
+    if (!org) {
+      console.error('[signUp] org not found for slug:', orgSlug)
+      return { error: null }
+    }
+
+    console.log('[signUp] org.id:', org.id)
 
     // Guard: never overwrite an already-active membership
-    // (prevents admin from accidentally setting their own record to pending)
-    const { data: existing } = await service
+    const { data: existing } = await service0
       .from('organization_members')
       .select('id, status')
       .eq('organization_id', org.id)
       .eq('user_id', userId)
       .maybeSingle()
 
+    console.log('[signUp] existing membership:', existing)
+
     if (existing?.status === 'active') {
-      // User already has access — let them log in normally
       return { error: null }
     }
 
     // Insert or restore a pending membership
-    const { data: upsertedMember, error: insertError } = await service
+    const { data: upsertedMember, error: insertError } = await service0
       .from('organization_members')
       .upsert(
         {
@@ -309,12 +311,17 @@ export async function signUp(
       .select('id')
       .single()
 
-    if (insertError) return { error: insertError.message }
+    if (insertError) {
+      console.error('[signUp] upsert error:', insertError)
+      return { error: insertError.message }
+    }
+
+    console.log('[signUp] upsertedMember:', upsertedMember)
 
     const memberId = upsertedMember?.id as string | undefined
 
     // Notify all admins of the new pending request
-    const { data: adminRows } = await service
+    const { data: adminRows } = await service0
       .from('organization_members')
       .select('user_id')
       .eq('organization_id', org.id)
@@ -325,14 +332,16 @@ export async function signUp(
       const adminUserIds = adminRows.map(r => r.user_id as string)
       // Fetch admin emails via the auth schema (service client only)
       const adminEmailPromises = adminUserIds.map(uid =>
-        service.auth.admin.getUserById(uid)
+        service0.auth.admin.getUserById(uid)
       )
       const adminResults = await Promise.allSettled(adminEmailPromises)
       const adminEmails = adminResults
-        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof service.auth.admin.getUserById>>> =>
+        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof service0.auth.admin.getUserById>>> =>
           r.status === 'fulfilled' && !!r.value.data?.user?.email
         )
         .map(r => r.value.data.user!.email as string)
+
+      console.log('[signUp] adminEmails to notify:', adminEmails)
 
       if (adminEmails.length > 0) {
         await sendPendingApprovalNotification({
