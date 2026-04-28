@@ -26,10 +26,10 @@ function isStrongPassword(password: string): boolean {
 // ─── Criar / Atualizar Projeto ───────────────────────────────────────────────
 
 export async function upsertProject(formData: FormData) {
-  const supabase = createClient()
   const orgId = await getOrganizationId()
   if (!orgId) throw new Error('Organização não encontrada')
 
+  const service = createServiceClient()
   const id = formData.get('id') as string | null
   const desvios: Desvio[] = []
   if (formData.get('d_escopo')) desvios.push('escopo')
@@ -52,13 +52,14 @@ export async function upsertProject(formData: FormData) {
   }
 
   if (id) {
-    const { error } = await supabase
+    const { error } = await service
       .from('projects')
       .update(payload)
       .eq('id', id)
+      .eq('organization_id', orgId)
     if (error) throw new Error(error.message)
   } else {
-    const { error } = await supabase
+    const { error } = await service
       .from('projects')
       .insert(payload)
     if (error) throw new Error(error.message)
@@ -72,11 +73,15 @@ export async function upsertProject(formData: FormData) {
 // ─── Deletar Projeto ─────────────────────────────────────────────────────────
 
 export async function deleteProject(id: string) {
-  const supabase = createClient()
-  const { error } = await supabase
+  const orgId = await getOrganizationId()
+  if (!orgId) throw new Error('Organização não encontrada')
+
+  const service = createServiceClient()
+  const { error } = await service
     .from('projects')
     .delete()
     .eq('id', id)
+    .eq('organization_id', orgId)
 
   if (error) throw new Error(error.message)
   revalidatePath('/dashboard')
