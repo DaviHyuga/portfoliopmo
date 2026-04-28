@@ -13,16 +13,6 @@ import {
 } from './email'
 import type { Farol, Natureza, Desvio } from '@/types'
 
-// ─── Allowed e-mail domains for registration ──────────────────────────────────
-const ALLOWED_DOMAINS = ['@fourd.com.br', '@chubb.com'] as const
-const EXCEPTION_EMAILS = ['davidepaula567@gmail.com'] as const
-
-function isEmailAllowed(email: string): boolean {
-  const lower = email.toLowerCase()
-  if ((EXCEPTION_EMAILS as readonly string[]).includes(lower)) return true
-  return ALLOWED_DOMAINS.some(d => lower.endsWith(d))
-}
-
 function isStrongPassword(password: string): boolean {
   // Minimum 8 chars, at least 1 uppercase letter, 1 digit
   return (
@@ -223,12 +213,7 @@ export async function signUp(
   role: 'viewer' | 'editor' | 'admin',
   confirmPassword: string,
 ): Promise<{ error: string | null }> {
-  // 1. Domain validation (backend — never trust only the frontend)
-  if (!isEmailAllowed(email)) {
-    return { error: 'Cadastro permitido apenas para e-mails @fourd.com.br ou @chubb.com.' }
-  }
-
-  // 2. Password rules
+  // 1. Password rules
   if (password !== confirmPassword) {
     return { error: 'As senhas não coincidem.' }
   }
@@ -289,7 +274,7 @@ export async function signUp(
     if (!org) return { error: null } // Org not yet created — onboarding flow
 
     // Upsert: if membership was deleted and user re-registers, restore it
-    const { error: insertError } = await service
+    const { data: upsertedMember, error: insertError } = await service
       .from('organization_members')
       .upsert(
         {
@@ -301,10 +286,14 @@ export async function signUp(
         },
         { onConflict: 'organization_id,user_id', ignoreDuplicates: false }
       )
+      .select('id')
+      .single()
 
     if (insertError) return { error: insertError.message }
 
-    // Notify all admins of the new pending request (fire-and-forget)
+    const memberId = upsertedMember?.id as string | undefined
+
+    // Notify all admins of the new pending request
     const { data: adminRows } = await service
       .from('organization_members')
       .select('user_id')
@@ -331,6 +320,7 @@ export async function signUp(
           newUserNome: nome.trim(),
           newUserEmail: email,
           requestedRole: role,
+          memberId,
         })
       }
     }

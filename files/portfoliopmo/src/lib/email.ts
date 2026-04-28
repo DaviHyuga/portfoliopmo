@@ -20,6 +20,7 @@ export async function sendPendingApprovalNotification(opts: {
   newUserNome: string
   newUserEmail: string
   requestedRole: string
+  memberId?: string
 }) {
   const resend = getResend()
   if (!resend || opts.adminEmails.length === 0) return
@@ -30,34 +31,53 @@ export async function sendPendingApprovalNotification(opts: {
     viewer: 'Viewer',
   }
 
+  const approveUrl = opts.memberId
+    ? `${SITE()}/acao-membro?action=approve&id=${opts.memberId}`
+    : `${SITE()}/configuracoes`
+  const rejectUrl = opts.memberId
+    ? `${SITE()}/acao-membro?action=reject&id=${opts.memberId}`
+    : `${SITE()}/configuracoes`
+
   await resend.emails.send({
     from: FROM,
     to: opts.adminEmails,
     subject: `[PortfolioPMO] Novo pedido de acesso — ${opts.newUserNome}`,
     html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:auto">
-        <h2 style="color:#6366f1">Novo pedido de acesso</h2>
+      <div style="font-family:sans-serif;max-width:520px;margin:auto;background:#0f1117;color:#e2e8f0;padding:32px;border-radius:12px">
+        <h2 style="color:#818cf8;margin-top:0">Novo pedido de acesso</h2>
         <p>Um novo usuário solicitou acesso ao <strong>PortfolioPMO</strong>:</p>
-        <table style="border-collapse:collapse;width:100%;margin:16px 0">
-          <tr><td style="padding:6px 0;color:#555">Nome</td>
-              <td style="padding:6px 0;font-weight:600">${opts.newUserNome}</td></tr>
-          <tr><td style="padding:6px 0;color:#555">E-mail</td>
-              <td style="padding:6px 0;font-weight:600">${opts.newUserEmail}</td></tr>
-          <tr><td style="padding:6px 0;color:#555">Acesso solicitado</td>
-              <td style="padding:6px 0;font-weight:600">${roleLabel[opts.requestedRole] ?? opts.requestedRole}</td></tr>
+        <table style="border-collapse:collapse;width:100%;margin:16px 0;background:#1a1f2e;border-radius:8px;padding:16px">
+          <tr>
+            <td style="padding:8px 12px;color:#94a3b8;width:40%">Nome</td>
+            <td style="padding:8px 12px;font-weight:600">${opts.newUserNome}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 12px;color:#94a3b8">E-mail</td>
+            <td style="padding:8px 12px;font-weight:600">${opts.newUserEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 12px;color:#94a3b8">Tipo de acesso</td>
+            <td style="padding:8px 12px;font-weight:600">${roleLabel[opts.requestedRole] ?? opts.requestedRole}</td>
+          </tr>
         </table>
-        <a href="${SITE()}/configuracoes"
-           style="display:inline-block;background:#6366f1;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">
-          Aprovar ou Rejeitar →
-        </a>
-        <p style="color:#888;font-size:12px;margin-top:24px">
-          Acesse Configurações → Solicitações Pendentes para gerenciar o acesso.
+        <p style="margin-bottom:16px">O que deseja fazer?</p>
+        <div style="display:flex;gap:12px">
+          <a href="${approveUrl}"
+             style="display:inline-block;background:#22c55e;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
+            ✅ Aprovar acesso
+          </a>
+          <a href="${rejectUrl}"
+             style="display:inline-block;background:#374151;color:#e2e8f0;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
+            ❌ Rejeitar
+          </a>
+        </div>
+        <p style="color:#64748b;font-size:12px;margin-top:24px">
+          Você precisa estar logado como administrador para executar a ação.<br>
+          Também é possível gerenciar em <a href="${SITE()}/configuracoes" style="color:#818cf8">Configurações → Solicitações Pendentes</a>.
         </p>
       </div>
     `,
-  }).catch(() => {
-    // Never block the registration flow due to email errors
-  })
+  }).catch(() => {})
 }
 
 // ─── E-mail para o usuário: acesso aprovado ───────────────────────────────────

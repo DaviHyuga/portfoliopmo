@@ -7,15 +7,6 @@ import { signIn, signUp } from '@/lib/actions'
 type Mode = 'login' | 'signup'
 type Role = 'viewer' | 'editor' | 'admin'
 
-const ALLOWED_DOMAINS = ['@fourd.com.br', '@chubb.com']
-const EXCEPTION_EMAILS = ['davidepaula567@gmail.com']
-
-function isEmailAllowed(email: string): boolean {
-  const lower = email.toLowerCase()
-  if (EXCEPTION_EMAILS.includes(lower)) return true
-  return ALLOWED_DOMAINS.some(d => lower.endsWith(d))
-}
-
 function isStrongPassword(p: string): boolean {
   return p.length >= 8 && /[A-Z]/.test(p) && /[0-9]/.test(p)
 }
@@ -48,9 +39,6 @@ export default function LoginPage() {
   // ── Frontend validations for signup ──────────────────────────────────────────
   function validateSignup(): string | null {
     if (!nome.trim()) return 'Informe seu nome.'
-    if (!isEmailAllowed(email)) {
-      return 'Cadastro permitido apenas para e-mails @fourd.com.br ou @chubb.com.'
-    }
     if (!isStrongPassword(password)) {
       return 'Senha fraca. Use no mínimo 8 caracteres, 1 letra maiúscula e 1 número.'
     }
@@ -177,15 +165,10 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder={mode === 'signup' ? 'seu@chubb.com' : 'seu@email.com'}
+                  placeholder="seu@email.com"
                   className={inputCls}
                   style={inputStyle}
                 />
-                {mode === 'signup' && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text3)' }}>
-                    Permitido: @chubb.com ou @fourd.com.br
-                  </p>
-                )}
               </div>
 
               {/* ── Senha ──────────────────────────────────────────────── */}
