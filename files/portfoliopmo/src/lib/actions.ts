@@ -6,6 +6,11 @@ import { redirect } from 'next/navigation'
 import { createClient } from './supabase/server'
 import { createServiceClient } from './supabase/service'
 import { getOrganizationId } from './projects'
+import {
+  sendPendingApprovalNotification,
+  sendApprovedEmail,
+  sendRejectedEmail,
+} from './email'
 import type { Farol, Natureza, Desvio } from '@/types'
 
 // ─── Allowed e-mail domains for registration ──────────────────────────────────
@@ -276,6 +281,37 @@ export async function signUp(
       // 23505 = unique violation (already registered) — treat as success
       return { error: insertError.message }
     }
+
+    // Notify all admins of the new pending request (fire-and-forget)
+    const { data: adminRows } = await service
+      .from('organization_members')
+      .select('user_id')
+      .eq('organization_id', org.id)
+      .eq('role', 'admin')
+      .eq('status', 'active')
+
+    if (adminRows && adminRows.length > 0) {
+      const adminUserIds = adminRows.map(r => r.user_id as string)
+      // Fetch admin emails via the auth schema (service client only)
+      const adminEmailPromises = adminUserIds.map(uid =>
+        service.auth.admin.getUserById(uid)
+      )
+      const adminResults = await Promise.allSettled(adminEmailPromises)
+      const adminEmails = adminResults
+        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof service.auth.admin.getUserById>>> =>
+          r.status === 'fulfilled' && !!r.value.data?.user?.email
+        )
+        .map(r => r.value.data.user!.email as string)
+
+      if (adminEmails.length > 0) {
+        sendPendingApprovalNotification({
+          adminEmails,
+          newUserNome: nome.trim(),
+          newUserEmail: email,
+          requestedRole: role,
+        })
+      }
+    }
   } catch {
     // Service client unavailable — user goes to onboarding as fallback
   }
@@ -289,6 +325,24 @@ export async function approveMember(memberId: string): Promise<{ error: string |
   const supabase = createClient()
   const { error } = await supabase.rpc('approve_member', { p_member_id: memberId })
   if (error) return { error: error.message }
+
+  // Send approval email (fire-and-forget, never block the action)
+  try {
+    const service = createServiceClient()
+    const { data: member } = await service
+      .from('organization_members')
+      .select('user_id, nome')
+      .eq('id', memberId)
+      .single()
+
+    if (member) {
+      const { data: authUser } = await service.auth.admin.getUserById(member.user_id)
+      if (authUser?.user?.email) {
+        sendApprovedEmail(authUser.user.email, member.nome ?? null)
+      }
+    }
+  } catch { /* email errors never block the action */ }
+
   revalidatePath('/configuracoes')
   return { error: null }
 }
@@ -297,8 +351,30 @@ export async function approveMember(memberId: string): Promise<{ error: string |
 
 export async function rejectMember(memberId: string): Promise<{ error: string | null }> {
   const supabase = createClient()
+
+  // Fetch member info before rejecting (after rejection, RLS may hide the row)
+  let memberEmail: string | null = null
+  let memberNome: string | null = null
+  try {
+    const service = createServiceClient()
+    const { data: member } = await service
+      .from('organization_members')
+      .select('user_id, nome')
+      .eq('id', memberId)
+      .single()
+
+    if (member) {
+      const { data: authUser } = await service.auth.admin.getUserById(member.user_id)
+      memberEmail = authUser?.user?.email ?? null
+      memberNome = member.nome ?? null
+    }
+  } catch { /* ignore */ }
+
   const { error } = await supabase.rpc('reject_member', { p_member_id: memberId })
   if (error) return { error: error.message }
+
+  if (memberEmail) sendRejectedEmail(memberEmail, memberNome)
+
   revalidatePath('/configuracoes')
   return { error: null }
 }

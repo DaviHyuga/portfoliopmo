@@ -21,20 +21,23 @@ export async function getOrganizationId(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  // Use SECURITY DEFINER RPC — same pattern as layout.tsx — to reliably
-  // propagate auth.uid() to the DB context in SSR (avoids RLS blind spots).
-  const { data: rows } = await supabase.rpc('get_my_membership')
-  const orgId = (rows as { organization_id: string }[] | null)?.[0]?.organization_id
-  if (orgId) return orgId
+  // Use service client to bypass RLS entirely — auth.uid() propagation
+  // to PostgreSQL is unreliable in Next.js SSR on Vercel.
+  try {
+    const service = createServiceClient()
+    const { data } = await service
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+    if (data?.organization_id) return data.organization_id
+  } catch { /* fall through to RPC */ }
 
-  // Fallback for when the function hasn't been created yet
-  const { data } = await supabase
-    .from('organization_members')
-    .select('organization_id')
-    .eq('user_id', user.id)
-    .limit(1)
-    .maybeSingle()
-  return data?.organization_id ?? null
+  // Fallback: RPC if service client unavailable
+  const { data: rows } = await supabase.rpc('get_my_membership')
+  return (rows as { organization_id: string }[] | null)?.[0]?.organization_id ?? null
 }
 
 export async function getProjects(): Promise<Project[]> {

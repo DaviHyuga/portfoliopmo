@@ -44,6 +44,22 @@ DROP POLICY IF EXISTS "editors can insert weekly statuses"    ON public.weekly_s
 DROP POLICY IF EXISTS "editors can update weekly statuses"    ON public.weekly_statuses;
 
 -- ─── STEP 3: Recreate RLS policies enforcing status = 'active' ────────────────
+-- Drop new policies too (safe if re-running after a partial execution)
+
+DROP POLICY IF EXISTS "active_members_select_org"          ON public.organizations;
+DROP POLICY IF EXISTS "users_see_own_member_record"         ON public.organization_members;
+DROP POLICY IF EXISTS "active_members_see_org_members"      ON public.organization_members;
+DROP POLICY IF EXISTS "admins_insert_members"               ON public.organization_members;
+DROP POLICY IF EXISTS "admins_update_members"               ON public.organization_members;
+DROP POLICY IF EXISTS "admins_delete_members"               ON public.organization_members;
+DROP POLICY IF EXISTS "active_members_select_projects"      ON public.projects;
+DROP POLICY IF EXISTS "editors_insert_projects"             ON public.projects;
+DROP POLICY IF EXISTS "editors_update_projects"             ON public.projects;
+DROP POLICY IF EXISTS "admins_delete_projects"              ON public.projects;
+DROP POLICY IF EXISTS "active_members_select_snapshots"     ON public.project_snapshots;
+DROP POLICY IF EXISTS "active_members_read_weekly_statuses"    ON public.weekly_statuses;
+DROP POLICY IF EXISTS "active_editors_insert_weekly_statuses"  ON public.weekly_statuses;
+DROP POLICY IF EXISTS "active_editors_update_weekly_statuses"  ON public.weekly_statuses;
 
 -- Helper subquery used repeatedly: "active member of org X"
 -- organizations: only ACTIVE members can see their org
