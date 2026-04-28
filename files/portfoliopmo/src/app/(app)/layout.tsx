@@ -10,16 +10,44 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect('/login')
 
-  const { data: member } = await supabase
+  // Fetch member record. We try with the `status` column (migration 004).
+  // If that column doesn't exist yet (migration pending), we fall back to a
+  // query without it so existing admins are never accidentally locked out.
+  let member: { organization_id: string; role: string; status?: string } | null = null
+
+  const { data: memberWithStatus, error: statusError } = await supabase
     .from('organization_members')
-    .select('organization_id, organizations(name)')
+    .select('organization_id, role, status')
     .eq('user_id', user.id)
     .single()
 
+  if (!statusError && memberWithStatus) {
+    member = memberWithStatus
+  } else {
+    // Fallback: status column may not exist yet — query without it
+    const { data: memberBase } = await supabase
+      .from('organization_members')
+      .select('organization_id, role')
+      .eq('user_id', user.id)
+      .single()
+    member = memberBase
+  }
+
   if (!member) redirect('/onboarding')
 
-  const orgs = member?.organizations as { name: string } | { name: string }[] | null
-  const orgName = (Array.isArray(orgs) ? orgs[0]?.name : orgs?.name) ?? 'Minha Empresa'
+  // Block pending / rejected users (only when status column exists)
+  if (member.status && member.status !== 'active') {
+    redirect('/aguardando-aprovacao')
+  }
+
+  // Fetch org name
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name')
+    .eq('id', member.organization_id)
+    .single()
+
+  const orgName = org?.name ?? 'Minha Empresa'
 
   const { count: projectCount } = await supabase
     .from('projects')

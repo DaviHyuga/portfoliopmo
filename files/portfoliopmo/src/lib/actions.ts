@@ -4,8 +4,28 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from './supabase/server'
+import { createServiceClient } from './supabase/service'
 import { getOrganizationId } from './projects'
 import type { Farol, Natureza, Desvio } from '@/types'
+
+// ─── Allowed e-mail domains for registration ──────────────────────────────────
+const ALLOWED_DOMAINS = ['@fourd.com.br', '@chubb.com'] as const
+const EXCEPTION_EMAILS = ['davidepaula567@gmail.com'] as const
+
+function isEmailAllowed(email: string): boolean {
+  const lower = email.toLowerCase()
+  if ((EXCEPTION_EMAILS as readonly string[]).includes(lower)) return true
+  return ALLOWED_DOMAINS.some(d => lower.endsWith(d))
+}
+
+function isStrongPassword(password: string): boolean {
+  // Minimum 8 chars, at least 1 uppercase letter, 1 digit
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[0-9]/.test(password)
+  )
+}
 
 // ─── Criar / Atualizar Projeto ───────────────────────────────────────────────
 
@@ -191,14 +211,96 @@ export async function signIn(email: string, password: string): Promise<{ error: 
 
 // ─── Auth: Registro ───────────────────────────────────────────────────────────
 
-export async function signUp(email: string, password: string) {
+export async function signUp(
+  email: string,
+  password: string,
+  nome: string,
+  role: 'viewer' | 'editor' | 'admin',
+  confirmPassword: string,
+): Promise<{ error: string | null }> {
+  // 1. Domain validation (backend — never trust only the frontend)
+  if (!isEmailAllowed(email)) {
+    return { error: 'Cadastro permitido apenas para e-mails @fourd.com.br ou @chubb.com.' }
+  }
+
+  // 2. Password rules
+  if (password !== confirmPassword) {
+    return { error: 'As senhas não coincidem.' }
+  }
+  if (!isStrongPassword(password)) {
+    return { error: 'Senha fraca. Use no mínimo 8 caracteres, 1 letra maiúscula e 1 número.' }
+  }
+
+  // 3. Create the Supabase Auth user (sends verification e-mail automatically)
   const supabase = createClient()
-  const { error } = await supabase.auth.signUp({
+  const { data, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback` },
   })
-  if (error) throw new Error(error.message)
+  if (authError) return { error: authError.message }
+  if (!data.user) return { error: 'Erro ao criar usuário. Tente novamente.' }
+
+  // 4. Insert organization_members record with pending_approval status.
+  //    We use the service-role client because the user has no session yet
+  //    (email not confirmed) and RLS would block the insert.
+  const orgSlug = process.env.DEFAULT_ORG_SLUG
+  if (!orgSlug) {
+    // No default org configured — user will go through /onboarding after
+    // confirming email (backward-compatible behavior).
+    return { error: null }
+  }
+
+  try {
+    const service = createServiceClient()
+
+    const { data: org } = await service
+      .from('organizations')
+      .select('id')
+      .eq('slug', orgSlug)
+      .single()
+
+    if (!org) return { error: null } // Org not yet created — onboarding flow
+
+    const { error: insertError } = await service
+      .from('organization_members')
+      .insert({
+        organization_id: org.id,
+        user_id: data.user.id,
+        nome: nome.trim(),
+        role,
+        status: 'pending_approval',
+      })
+
+    if (insertError && insertError.code !== '23505') {
+      // 23505 = unique violation (already registered) — treat as success
+      return { error: insertError.message }
+    }
+  } catch {
+    // Service client unavailable — user goes to onboarding as fallback
+  }
+
+  return { error: null }
+}
+
+// ─── Auth: Aprovar Membro ─────────────────────────────────────────────────────
+
+export async function approveMember(memberId: string): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.rpc('approve_member', { p_member_id: memberId })
+  if (error) return { error: error.message }
+  revalidatePath('/configuracoes')
+  return { error: null }
+}
+
+// ─── Auth: Rejeitar Membro ────────────────────────────────────────────────────
+
+export async function rejectMember(memberId: string): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  const { error } = await supabase.rpc('reject_member', { p_member_id: memberId })
+  if (error) return { error: error.message }
+  revalidatePath('/configuracoes')
+  return { error: null }
 }
 
 // ─── Auth: Logout ────────────────────────────────────────────────────────────
