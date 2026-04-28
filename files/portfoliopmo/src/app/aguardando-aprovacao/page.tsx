@@ -26,9 +26,15 @@ export default function AguardandoAprovacaoPage() {
       .from('organization_members')
       .select('status, nome')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (!member) { window.location.href = '/onboarding'; return }
+    if (!member) {
+      // Membership not visible yet (email not confirmed or RLS delay).
+      // Stay on this page with pending_approval status.
+      setStatus('pending_approval')
+      setChecking(false)
+      return
+    }
 
     setStatus(member.status as Status)
     setNome(member.nome ?? null)
