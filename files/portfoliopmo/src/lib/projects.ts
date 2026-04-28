@@ -55,11 +55,15 @@ export async function getProjects(): Promise<Project[]> {
 }
 
 export async function getProject(id: string): Promise<Project | null> {
-  const supabase = createClient()
-  const { data, error } = await supabase
+  const orgId = await getOrganizationId()
+  if (!orgId) return null
+
+  const db = getServerQueryClient()
+  const { data, error } = await db
     .from('projects')
     .select('*')
     .eq('id', id)
+    .eq('organization_id', orgId)
     .single()
 
   if (error) return null
@@ -92,8 +96,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 export async function getProjectHistory(projectId: string) {
-  const supabase = createClient()
-  const { data } = await supabase
+  const db = getServerQueryClient()
+  const { data } = await db
     .from('project_snapshots')
     .select('*')
     .eq('project_id', projectId)
