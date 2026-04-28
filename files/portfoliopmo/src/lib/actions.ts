@@ -444,12 +444,24 @@ export async function createMember(opts: {
   if (createError) {
     const alreadyExists =
       createError.message.toLowerCase().includes('already') || createError.status === 422
-    if (!alreadyExists) return { error: createError.message }
+    if (!alreadyExists) {
+      console.error('[createMember] createUser error:', createError)
+      return { error: createError.message }
+    }
+    // User already exists — look up their ID and UPDATE their password
     const { data: foundId } = await service.rpc('get_user_id_by_email', { user_email: opts.email })
     userId = (foundId as string | null) ?? null
-    if (!userId) return { error: 'Usuário não encontrado.' }
+    console.log('[createMember] existing user found, userId:', userId)
+    if (!userId) return { error: 'Usuário não encontrado no sistema.' }
+    // Update password so the admin-set temp password always works
+    const { error: pwError } = await service.auth.admin.updateUserById(userId, {
+      password: opts.password,
+      email_confirm: true,
+    })
+    if (pwError) console.error('[createMember] updateUserById error:', pwError)
   } else {
     userId = newUser.user?.id ?? null
+    console.log('[createMember] new user created, userId:', userId)
   }
 
   if (!userId) return { error: 'Erro ao criar usuário.' }
