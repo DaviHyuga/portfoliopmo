@@ -326,7 +326,7 @@ export async function signUp(
         .map(r => r.value.data.user!.email as string)
 
       if (adminEmails.length > 0) {
-        sendPendingApprovalNotification({
+        await sendPendingApprovalNotification({
           adminEmails,
           newUserNome: nome.trim(),
           newUserEmail: email,
@@ -360,7 +360,7 @@ export async function approveMember(memberId: string): Promise<{ error: string |
     if (member) {
       const { data: authUser } = await service.auth.admin.getUserById(member.user_id)
       if (authUser?.user?.email) {
-        sendApprovedEmail(authUser.user.email, member.nome ?? null)
+        await sendApprovedEmail(authUser.user.email, member.nome ?? null)
       }
     }
   } catch { /* email errors never block the action */ }
@@ -395,7 +395,7 @@ export async function rejectMember(memberId: string): Promise<{ error: string | 
   const { error } = await supabase.rpc('reject_member', { p_member_id: memberId })
   if (error) return { error: error.message }
 
-  if (memberEmail) sendRejectedEmail(memberEmail, memberNome)
+  if (memberEmail) await sendRejectedEmail(memberEmail, memberNome)
 
   revalidatePath('/configuracoes')
   return { error: null }
