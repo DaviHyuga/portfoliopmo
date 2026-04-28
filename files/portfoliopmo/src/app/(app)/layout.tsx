@@ -15,14 +15,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // auth.uid() propagation to PostgreSQL is unreliable in Next.js SSR on Vercel,
   // even with SECURITY DEFINER functions. We already have the verified user from
   // supabase.auth.getUser() (JWT verification), so we can safely query by user.id.
-  type MemberRow = { organization_id: string; role: string; status: string }
+  type MemberRow = { organization_id: string; role: string; status: string; must_change_password: boolean }
   let member: MemberRow | null = null
 
   try {
     const service = createServiceClient()
     const { data } = await service
       .from('organization_members')
-      .select('organization_id, role, status')
+      .select('organization_id, role, status, must_change_password')
       .eq('user_id', user.id)
       .limit(1)
       .maybeSingle()
@@ -38,6 +38,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Block pending / rejected users
   if (member.status && member.status !== 'active') {
     redirect('/aguardando-aprovacao')
+  }
+
+  // Force password change if admin set a temporary password
+  if (member.must_change_password) {
+    redirect('/alterar-senha')
   }
 
   // Fetch org name and project count via service client (same RLS bypass)

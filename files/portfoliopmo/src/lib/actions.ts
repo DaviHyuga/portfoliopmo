@@ -420,6 +420,86 @@ export async function rejectMember(memberId: string): Promise<{ error: string | 
   return { error: null }
 }
 
+// ─── Auth: Criar Membro (admin cria usuário com senha temporária) ─────────────
+
+export async function createMember(opts: {
+  email: string
+  password: string
+  nome: string
+  role: 'viewer' | 'editor' | 'admin'
+}): Promise<{ error: string | null }> {
+  const orgId = await getOrganizationId()
+  if (!orgId) return { error: 'Organização não encontrada' }
+
+  const service = createServiceClient()
+
+  // Create (or locate) the auth user
+  let userId: string | null = null
+  const { data: newUser, error: createError } = await service.auth.admin.createUser({
+    email: opts.email,
+    password: opts.password,
+    email_confirm: true,
+  })
+
+  if (createError) {
+    const alreadyExists =
+      createError.message.toLowerCase().includes('already') || createError.status === 422
+    if (!alreadyExists) return { error: createError.message }
+    const { data: foundId } = await service.rpc('get_user_id_by_email', { user_email: opts.email })
+    userId = (foundId as string | null) ?? null
+    if (!userId) return { error: 'Usuário não encontrado.' }
+  } else {
+    userId = newUser.user?.id ?? null
+  }
+
+  if (!userId) return { error: 'Erro ao criar usuário.' }
+
+  // Guard: never downgrade an existing active admin
+  const { data: existing } = await service
+    .from('organization_members')
+    .select('id, status, role')
+    .eq('organization_id', orgId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (existing?.status === 'active' && existing.role === 'admin' && opts.role !== 'admin') {
+    return { error: 'Não é possível alterar o papel de um administrador ativo.' }
+  }
+
+  const { error: upsertError } = await service
+    .from('organization_members')
+    .upsert(
+      {
+        organization_id: orgId,
+        user_id: userId,
+        nome: opts.nome.trim(),
+        role: opts.role,
+        status: 'active',
+        must_change_password: true,
+      },
+      { onConflict: 'organization_id,user_id', ignoreDuplicates: false }
+    )
+
+  if (upsertError) return { error: upsertError.message }
+
+  revalidatePath('/configuracoes')
+  return { error: null }
+}
+
+// ─── Auth: Limpar flag de senha temporária ────────────────────────────────────
+
+export async function clearMustChangePassword(): Promise<void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const service = createServiceClient()
+  await service
+    .from('organization_members')
+    .update({ must_change_password: false })
+    .eq('user_id', user.id)
+}
+
 // ─── Auth: Logout ────────────────────────────────────────────────────────────
 
 export async function signOut() {

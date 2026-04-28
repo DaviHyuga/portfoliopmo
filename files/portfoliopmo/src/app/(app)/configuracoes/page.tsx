@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { inviteMember, removeMember, approveMember, rejectMember } from '@/lib/actions'
+import { createMember, removeMember, approveMember, rejectMember } from '@/lib/actions'
 
 type Role   = 'admin' | 'editor' | 'viewer'
 type Status = 'active' | 'pending_approval' | 'rejected'
@@ -42,11 +42,13 @@ export default function ConfiguracoesPage() {
   const [currentRole, setCurrentRole] = useState<Role | null>(null)
   const [loading, setLoading]         = useState(true)
 
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole]   = useState<Role>('viewer')
-  const [inviting, setInviting]       = useState(false)
-  const [inviteError, setInviteError] = useState<string | null>(null)
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
+  const [newNome, setNewNome]         = useState('')
+  const [newEmail, setNewEmail]       = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [newRole, setNewRole]         = useState<Role>('viewer')
+  const [creating, setCreating]       = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null)
 
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -68,20 +70,23 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => { fetchMembers() }, [])
 
-  async function handleInvite(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    setInviting(true)
-    setInviteError(null)
-    setInviteSuccess(null)
-    try {
-      await inviteMember(inviteEmail, inviteRole)
-      setInviteSuccess(`Membro ${inviteEmail} adicionado com sucesso.`)
-      setInviteEmail('')
+    setCreating(true)
+    setCreateError(null)
+    setCreateSuccess(null)
+    const result = await createMember({ email: newEmail, password: newPassword, nome: newNome, role: newRole })
+    if (result.error) {
+      setCreateError(result.error)
+    } else {
+      setCreateSuccess(`Usuário ${newEmail} criado. Compartilhe o e-mail e a senha temporária com ele.`)
+      setNewNome('')
+      setNewEmail('')
+      setNewPassword('')
+      setNewRole('viewer')
       await fetchMembers()
-    } catch (err: unknown) {
-      setInviteError(err instanceof Error ? err.message : 'Erro ao convidar membro')
     }
-    setInviting(false)
+    setCreating(false)
   }
 
   async function handleRemove(memberId: string) {
@@ -280,44 +285,64 @@ export default function ConfiguracoesPage() {
         )}
       </div>
 
-      {/* ── Invite form (admin only) ──────────────────────────────────────────── */}
+      {/* ── Create member form (admin only) ──────────────────────────────────── */}
       {isAdmin && (
         <div
           className="rounded-xl border p-5"
           style={{ background: 'var(--bg2)', borderColor: 'var(--border)' }}
         >
-          <h2 className="text-sm font-medium mb-4">Adicionar Membro Diretamente</h2>
-          <form onSubmit={handleInvite} className="space-y-4">
+          <h2 className="text-sm font-medium mb-1">Adicionar Novo Usuário</h2>
+          <p className="text-xs mb-4" style={{ color: 'var(--text3)' }}>
+            Crie o usuário com uma senha temporária e compartilhe com ele. No primeiro acesso será solicitado que ele troque a senha.
+          </p>
+          <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label
-                  className="block text-xs font-medium mb-1.5 uppercase tracking-wide"
-                  style={{ color: 'var(--text2)' }}
-                >
-                  E-mail
+                <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+                  Nome completo
                 </label>
                 <input
-                  type="email"
-                  required
-                  value={inviteEmail}
-                  onChange={e => setInviteEmail(e.target.value)}
-                  placeholder="membro@empresa.com"
-                  className={inputCls}
-                  style={inputStyle}
+                  type="text" required value={newNome}
+                  onChange={e => setNewNome(e.target.value)}
+                  placeholder="Nome do usuário"
+                  className={inputCls} style={inputStyle}
                 />
               </div>
               <div>
-                <label
-                  className="block text-xs font-medium mb-1.5 uppercase tracking-wide"
-                  style={{ color: 'var(--text2)' }}
-                >
-                  Papel
+                <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+                  E-mail
+                </label>
+                <input
+                  type="email" required value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  placeholder="usuario@empresa.com"
+                  className={inputCls} style={inputStyle}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+                  Senha temporária
+                </label>
+                <input
+                  type="text" required value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="Ex: Temp@2025"
+                  className={inputCls} style={inputStyle}
+                />
+                <p className="text-xs mt-1" style={{ color: 'var(--text3)' }}>
+                  Compartilhe esta senha com o usuário. Ele será obrigado a trocá-la no 1º acesso.
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text2)' }}>
+                  Tipo de acesso
                 </label>
                 <select
-                  value={inviteRole}
-                  onChange={e => setInviteRole(e.target.value as Role)}
-                  className={inputCls}
-                  style={inputStyle}
+                  value={newRole} onChange={e => setNewRole(e.target.value as Role)}
+                  className={inputCls} style={inputStyle}
                 >
                   <option value="viewer">Viewer — Apenas visualizar</option>
                   <option value="editor">Editor — Criar e editar projetos</option>
@@ -326,44 +351,23 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
 
-            <div
-              className="rounded-lg p-3 text-xs"
-              style={{ background: 'var(--bg3)', color: 'var(--text2)' }}
-            >
-              <p className="font-medium mb-1" style={{ color: 'var(--text)' }}>
-                Adicionar membro diretamente:
-              </p>
-              <ol className="space-y-0.5 list-decimal list-inside">
-                <li>O membro precisa já ter uma conta criada em <span className="font-mono">/login</span></li>
-                <li>Use o e-mail da conta cadastrada</li>
-                <li>Ele terá acesso imediato ao fazer login</li>
-              </ol>
-            </div>
-
-            {inviteError && (
-              <p
-                className="text-xs px-3 py-2 rounded-lg"
-                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
-              >
-                {inviteError}
+            {createError && (
+              <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
+                {createError}
               </p>
             )}
-            {inviteSuccess && (
-              <p
-                className="text-xs px-3 py-2 rounded-lg"
-                style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}
-              >
-                {inviteSuccess}
+            {createSuccess && (
+              <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
+                {createSuccess}
               </p>
             )}
 
             <button
-              type="submit"
-              disabled={inviting}
+              type="submit" disabled={creating}
               className="px-5 py-2.5 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-50"
               style={{ background: 'var(--accent)' }}
             >
-              {inviting ? 'Adicionando...' : '+ Adicionar Membro'}
+              {creating ? 'Criando...' : '+ Criar Usuário'}
             </button>
           </form>
         </div>
